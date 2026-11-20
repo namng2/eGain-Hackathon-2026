@@ -31,6 +31,18 @@ export function formatJoinedDate(iso: string): string {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+/** A moment in time (ISO), shown in the viewer's local time. Use on the client only. */
+export function formatDateTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export function attendanceLabel(value: "in_person" | "remote"): string {
   return value === "in_person" ? "In person" : "Remote";
 }

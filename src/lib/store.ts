@@ -8,6 +8,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { customAlphabet, nanoid } from "nanoid";
+import { isInterest } from "./gift-catalog";
 import {
   contactKey,
   normalizeEmail,
@@ -36,7 +37,12 @@ async function readData(): Promise<StoreData> {
     const parsed = JSON.parse(raw) as Partial<StoreData>;
     return {
       events: parsed.events ?? [],
-      participants: parsed.participants ?? [],
+      // Entries saved before interests existed get an empty list, and any
+      // free-text interests saved before the fixed list are dropped.
+      participants: (parsed.participants ?? []).map((p) => ({
+        ...p,
+        interests: (p.interests ?? []).filter(isInterest),
+      })),
     };
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {

@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { apiError, parseBody } from "@/lib/api";
 import { identitiesMatch } from "@/lib/identity-match";
+import { buildGiftIdeas } from "@/lib/poll";
 import { toPublicEvent } from "@/lib/public-event";
 import {
   countParticipants,
   getEvent,
+  listParticipants,
   updateEvent,
+  type EventChanges,
 } from "@/lib/store";
 import { updateEventSchema } from "@/lib/validation";
 
@@ -33,7 +36,18 @@ export async function PATCH(request: Request, { params }: Context) {
     return apiError("Only the organizer can change this event", 403);
   }
 
-  const updated = await updateEvent(eventId, parsed.data.changes);
+  // Closing sign-ups turns the interests poll into gift ideas. Closing again
+  // after a reopen regenerates them from the latest answers.
+  const changes: EventChanges = { ...parsed.data.changes };
+  if (changes.status === "closed") {
+    const participants = await listParticipants(eventId);
+    Object.assign(
+      changes,
+      buildGiftIdeas({ budget: changes.budget ?? event.budget }, participants),
+    );
+  }
+
+  const updated = await updateEvent(eventId, changes);
   if (!updated) return apiError("Event not found", 404);
 
   const count = await countParticipants(eventId);

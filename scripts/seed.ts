@@ -30,8 +30,8 @@ async function main() {
       phone: "",
       department: "Engineering",
       attendance: "in_person" as const,
-      interests: "plants, cycling, sci-fi novels",
       giftTeaser: "Something for a plant lover",
+      interests: ["gardening", "coffee", "hiking"],
     },
     {
       name: "Priya Shah",
@@ -39,7 +39,7 @@ async function main() {
       phone: "+15555550123",
       department: "Support",
       attendance: "remote" as const,
-      interests: "baking, yoga, true crime podcasts",
+      interests: ["board games", "coffee", "reading"],
     },
     {
       name: "Sam Okafor",
@@ -47,8 +47,8 @@ async function main() {
       phone: "",
       department: "Sales",
       attendance: "in_person" as const,
-      interests: "coffee, board games",
       giftTeaser: "Snacks, probably",
+      interests: ["cooking", "running", "board games"],
     },
   ];
   for (const person of people) {

@@ -7,13 +7,15 @@ import { errorText } from "@/lib/errors";
 import {
   attendanceLabel,
   formatBudget,
+  formatDateTime,
   formatEventDate,
   formatJoinedDate,
 } from "@/lib/format";
-import type { Identity, Participant, PublicEvent } from "@/lib/types";
+import type { Identity, Participant, PollData, PublicEvent } from "@/lib/types";
 import { CopyLinkButton } from "./copy-link-button";
 import { EventFields, eventFromForm } from "./event-fields";
 import { IdentityGate } from "./identity-gate";
+import { PollPanel } from "./poll-panel";
 import { Alert, Button, Card, StatusBadge, inputClass } from "./ui";
 
 type Roster = { event: PublicEvent; participants: Participant[] };
@@ -55,6 +57,7 @@ function ManageView({
 }) {
   const origin = useOrigin();
   const [roster, setRoster] = useState<Roster | null>(null);
+  const [poll, setPoll] = useState<PollData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [busy, setBusy] = useState(false);
@@ -73,6 +76,14 @@ function ManageView({
       },
       (err: unknown) => {
         if (active) setLoadError(errorText(err));
+      },
+    );
+    callApi<PollData>(`/api/events/${eventId}/poll`, { method: "GET" }).then(
+      (data) => {
+        if (active) setPoll(data);
+      },
+      () => {
+        // The poll is a bonus on this page. The roster error above is the one to show.
       },
     );
     return () => {
@@ -126,7 +137,7 @@ function ManageView({
         p.email || p.phone,
         p.department,
         attendanceLabel(p.attendance),
-        p.interests,
+        p.interests.join(", "),
         p.giftTeaser,
         p.joinedAt,
       ]),
@@ -247,6 +258,22 @@ function ManageView({
         </div>
       </Card>
 
+      {poll ? (
+        <PollPanel
+          poll={poll}
+          note={
+            poll.giftIdeasAt
+              ? `Generated when sign-ups closed on ${formatDateTime(poll.giftIdeasAt)}.`
+              : undefined
+          }
+        />
+      ) : null}
+      {event.status === "open" ? (
+        <p className="-mt-3 text-sm text-stone-500">
+          Gift ideas are generated from the poll when you close sign-ups.
+        </p>
+      ) : null}
+
       <Card>
         <h2 className="font-semibold">Event details</h2>
         <form
@@ -307,7 +334,9 @@ function ManageView({
                     <td className="break-all px-4 py-3 text-stone-600">{p.email || p.phone}</td>
                     <td className="px-4 py-3">{p.department ?? "—"}</td>
                     <td className="px-4 py-3">{attendanceLabel(p.attendance)}</td>
-                    <td className="px-4 py-3 text-stone-600">{p.interests ?? "—"}</td>
+                    <td className="px-4 py-3 text-stone-600">
+                      {p.interests.length > 0 ? p.interests.join(", ") : "—"}
+                    </td>
                     <td className="px-4 py-3 text-stone-600">{p.giftTeaser ?? "—"}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-stone-500">
                       {formatJoinedDate(p.joinedAt)}

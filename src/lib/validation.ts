@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { INTERESTS } from "./gift-catalog";
 import {
   isValidEmail,
   isValidPhone,
@@ -97,6 +98,17 @@ export const updateEventSchema = z.object({
     .partial(),
 });
 
+const MAX_INTERESTS = 8;
+
+// Interests must come from the fixed list. Repeats are dropped, and more than
+// 8 left after that is an error.
+const interests = z
+  .array(z.enum(INTERESTS, { error: "Choose interests from the list" }))
+  .transform((items) => [...new Set(items)])
+  .refine((items) => items.length <= MAX_INTERESTS, {
+    message: `Pick up to ${MAX_INTERESTS} interests`,
+  });
+
 const participantFields = {
   department: z
     .string()
@@ -107,21 +119,24 @@ const participantFields = {
   attendance: z.enum(["in_person", "remote"], {
     error: "Choose in person or remote",
   }),
-  interests: z
-    .string()
-    .trim()
-    .min(1, "Tell us what you're into")
-    .max(300, "Keep your interests under 300 characters"),
   giftTeaser: z
     .string()
     .trim()
     .max(200)
     .optional()
     .transform((v) => (v ? v : undefined)),
+  interests: interests.optional(),
 };
 
 export const joinEventSchema = z
-  .object({ name, email, phone, ...participantFields })
+  .object({
+    name,
+    email,
+    phone,
+    ...participantFields,
+    // A new sign-up with no interests stores an empty list.
+    interests: interests.optional().transform((items) => items ?? []),
+  })
   .superRefine(checkContact);
 
 export const updateParticipantSchema = z.object({
