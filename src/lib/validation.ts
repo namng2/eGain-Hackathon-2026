@@ -1,25 +1,64 @@
 import { z } from "zod";
-import { normalizeEmail, normalizeName } from "./identity-match";
+import {
+  isValidEmail,
+  isValidPhone,
+  normalizeEmail,
+  normalizeName,
+  normalizePhone,
+} from "./identity-match";
 
 const name = z
   .string()
   .transform(normalizeName)
   .pipe(z.string().min(1, "Name is required").max(80, "Name is too long"));
 
+// Email and phone are both optional on the wire; the contact rule below
+// requires at least one of them to be valid.
 const email = z
   .string()
-  .transform(normalizeEmail)
-  .pipe(z.email("Enter a valid email address").max(200));
+  .max(200)
+  .optional()
+  .transform((v) => normalizeEmail(v ?? ""));
 
-const optionalText = (max: number) =>
-  z
-    .string()
-    .trim()
-    .max(max)
-    .optional()
-    .transform((v) => (v ? v : undefined));
+const phone = z
+  .string()
+  .max(40)
+  .optional()
+  .transform((v) => normalizePhone(v ?? ""));
 
-export const identitySchema = z.object({ name, email });
+type Contact = { email: string; phone: string };
+
+function checkContact(value: Contact, ctx: z.RefinementCtx) {
+  if (!value.email && !value.phone) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Enter an email address or phone number",
+      path: ["email"],
+    });
+  } else if (value.email && !isValidEmail(value.email)) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Enter a valid email address",
+      path: ["email"],
+    });
+  } else if (value.phone && !isValidPhone(value.phone)) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Enter a valid phone number",
+      path: ["phone"],
+    });
+  }
+}
+
+export const identitySchema = z
+  .object({ name, email, phone })
+  .superRefine(checkContact);
+
+/** The organizer must have an email, since the manage page is tied to it. */
+const organizerSchema = identitySchema.refine((v) => v.email !== "", {
+  message: "The organizer needs an email address",
+  path: ["email"],
+});
 
 const eventFields = {
   name: z.string().trim().min(1, "Event name is required").max(120),
@@ -35,11 +74,16 @@ const eventFields = {
     .min(1, "Budget must be at least 1")
     .max(10000),
   stealLimit: z.coerce.number().int().min(1).max(10),
-  rules: optionalText(2000),
+  rules: z
+    .string()
+    .trim()
+    .max(2000)
+    .optional()
+    .transform((v) => (v ? v : undefined)),
 };
 
 export const createEventSchema = z.object({
-  organizer: identitySchema,
+  organizer: organizerSchema,
   ...eventFields,
 });
 
@@ -54,18 +98,31 @@ export const updateEventSchema = z.object({
 });
 
 const participantFields = {
-  department: optionalText(80),
+  department: z
+    .string()
+    .trim()
+    .max(80)
+    .optional()
+    .transform((v) => (v ? v : undefined)),
   attendance: z.enum(["in_person", "remote"], {
     error: "Choose in person or remote",
   }),
-  giftTeaser: optionalText(200),
+  interests: z
+    .string()
+    .trim()
+    .min(1, "Tell us what you're into")
+    .max(300, "Keep your interests under 300 characters"),
+  giftTeaser: z
+    .string()
+    .trim()
+    .max(200)
+    .optional()
+    .transform((v) => (v ? v : undefined)),
 };
 
-export const joinEventSchema = z.object({
-  name,
-  email,
-  ...participantFields,
-});
+export const joinEventSchema = z
+  .object({ name, email, phone, ...participantFields })
+  .superRefine(checkContact);
 
 export const updateParticipantSchema = z.object({
   identity: identitySchema,

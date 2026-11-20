@@ -4,10 +4,10 @@ import { useCallback, useMemo, useSyncExternalStore } from "react";
 import type { Identity } from "./types";
 
 /**
- * Remembers the name + email the visitor last used, so forms can be pre-filled.
- * This is NOT a login: it lives only in this browser and is sent as-is with
- * each request. Storage can be blocked (private mode, settings), so we fall
- * back to an in-memory copy for the rest of the tab's life.
+ * Remembers the name + email or phone the visitor last used, so forms can be
+ * pre-filled. This is NOT a login: it lives only in this browser and is sent
+ * as-is with each request. Storage can be blocked (private mode, settings), so
+ * we fall back to an in-memory copy for the rest of the tab's life.
  */
 
 const KEY = "white-elephant:identity";
@@ -49,7 +49,12 @@ function parseIdentity(raw: string | null | undefined): Identity | null {
   try {
     const value = JSON.parse(raw) as Partial<Identity>;
     if (typeof value.name === "string" && typeof value.email === "string") {
-      return { name: value.name, email: value.email };
+      return {
+        name: value.name,
+        email: value.email,
+        // Entries saved before phone support have no phone field.
+        phone: typeof value.phone === "string" ? value.phone : "",
+      };
     }
     return null;
   } catch {
@@ -62,7 +67,11 @@ export function useIdentity() {
   const identity = useMemo(() => parseIdentity(raw), [raw]);
 
   const setIdentity = useCallback((next: Identity) => {
-    const json = JSON.stringify({ name: next.name, email: next.email });
+    const json = JSON.stringify({
+      name: next.name,
+      email: next.email,
+      phone: next.phone,
+    });
     memoryRaw = json;
     try {
       window.localStorage.setItem(KEY, json);

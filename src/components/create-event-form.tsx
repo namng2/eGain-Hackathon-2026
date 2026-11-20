@@ -40,7 +40,11 @@ function CreateForm({
       const { id } = await callApi<{ id: string }>("/api/events", {
         body: { organizer, ...eventFromForm(form) },
       });
-      onOrganizerSaved({ name: organizer.name.trim(), email: organizer.email.trim() });
+      onOrganizerSaved({
+        name: organizer.name.trim(),
+        email: organizer.email.trim(),
+        phone: "",
+      });
       router.push(`/events/${id}/manage`);
     } catch (err) {
       setError(errorText(err));

@@ -120,12 +120,13 @@ function ManageView({
   function exportCsv() {
     if (!roster) return;
     const rows = [
-      ["Name", "Email", "Department", "Attendance", "Gift hint", "Joined"],
+      ["Name", "Email or phone", "Department", "Attendance", "Interests", "Gift hint", "Joined"],
       ...roster.participants.map((p) => [
         p.name,
-        p.email,
+        p.email || p.phone,
         p.department,
         attendanceLabel(p.attendance),
+        p.interests,
         p.giftTeaser,
         p.joinedAt,
       ]),
@@ -151,7 +152,7 @@ function ManageView({
       <Alert tone="error">
         <p>{loadError}</p>
         <Button variant="secondary" onClick={onForget} className="mt-3">
-          Use a different name and email
+          Use a different name or contact
         </Button>
       </Alert>
     );
@@ -167,7 +168,7 @@ function ManageView({
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-sm font-medium text-emerald-800">{event.companyName}</p>
+            <p className="text-sm font-medium text-green-800">{event.companyName}</p>
             <h1 className="text-2xl font-bold tracking-tight">{event.name}</h1>
           </div>
           <StatusBadge status={event.status} />
@@ -178,11 +179,11 @@ function ManageView({
         </p>
         <p className="mt-3 text-sm text-stone-600">
           Signed in as <strong className="text-stone-900">{identity.name}</strong> (
-          {identity.email}).{" "}
+          {identity.email || identity.phone}).{" "}
           <button
             type="button"
             onClick={onForget}
-            className="font-medium text-emerald-800 underline underline-offset-2"
+            className="font-medium text-green-800 underline underline-offset-2"
           >
             Not you?
           </button>
@@ -288,9 +289,10 @@ function ManageView({
               <thead className="bg-stone-50 text-xs uppercase tracking-wide text-stone-500">
                 <tr>
                   <th className="px-4 py-2 font-medium">Name</th>
-                  <th className="px-4 py-2 font-medium">Email</th>
+                  <th className="px-4 py-2 font-medium">Email or phone</th>
                   <th className="px-4 py-2 font-medium">Department</th>
                   <th className="px-4 py-2 font-medium">Attendance</th>
+                  <th className="px-4 py-2 font-medium">Interests</th>
                   <th className="px-4 py-2 font-medium">Gift hint</th>
                   <th className="px-4 py-2 font-medium">Joined</th>
                   <th className="px-4 py-2">
@@ -302,9 +304,10 @@ function ManageView({
                 {participants.map((p) => (
                   <tr key={p.id}>
                     <td className="px-4 py-3 font-medium text-stone-900">{p.name}</td>
-                    <td className="break-all px-4 py-3 text-stone-600">{p.email}</td>
+                    <td className="break-all px-4 py-3 text-stone-600">{p.email || p.phone}</td>
                     <td className="px-4 py-3">{p.department ?? "—"}</td>
                     <td className="px-4 py-3">{attendanceLabel(p.attendance)}</td>
+                    <td className="px-4 py-3 text-stone-600">{p.interests ?? "—"}</td>
                     <td className="px-4 py-3 text-stone-600">{p.giftTeaser ?? "—"}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-stone-500">
                       {formatJoinedDate(p.joinedAt)}

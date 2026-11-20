@@ -29,7 +29,7 @@ export function AccountView() {
       </div>
       <IdentityGate
         title="Find my events"
-        description="Enter the name and email you used to sign up or create an event. There's no password yet, so anyone who knows these details can see this account."
+        description="Enter the name and email or phone you used to sign up or create an event. There's no password yet, so anyone who knows these details can see this account."
       >
         {(identity, forget) => (
           <AccountDetails identity={identity} onForget={forget} />
@@ -75,7 +75,7 @@ function AccountDetails({
       <Alert tone="error">
         <p>{error}</p>
         <Button variant="secondary" onClick={onForget} className="mt-3">
-          Use a different name and email
+          Use a different name or contact
         </Button>
       </Alert>
     );
@@ -89,11 +89,11 @@ function AccountDetails({
       <Card>
         <p className="text-sm text-stone-600">
           Signed in as <strong className="text-stone-900">{identity.name}</strong> (
-          {identity.email}).{" "}
+          {identity.email || identity.phone}).{" "}
           <button
             type="button"
             onClick={onForget}
-            className="font-medium text-emerald-800 underline underline-offset-2"
+            className="font-medium text-green-800 underline underline-offset-2"
           >
             Not you?
           </button>
@@ -105,7 +105,7 @@ function AccountDetails({
         {summary.organizing.length === 0 ? (
           <EmptyNote>
             You haven&apos;t created an event yet.{" "}
-            <Link href="/create" className="font-medium text-emerald-800 underline">
+            <Link href="/create" className="font-medium text-green-800 underline">
               Create one
             </Link>
             .
@@ -144,7 +144,7 @@ function OrganizerCard({ event }: { event: PublicEvent }) {
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-emerald-800">{event.companyName}</p>
+          <p className="text-sm font-medium text-green-800">{event.companyName}</p>
           <h3 className="font-semibold">{event.name}</h3>
           <p className="mt-1 text-sm text-stone-600">
             {formatEventDate(event.date)} · {event.location}
@@ -228,7 +228,7 @@ function JoinedCard({
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-emerald-800">{event.companyName}</p>
+          <p className="text-sm font-medium text-green-800">{event.companyName}</p>
           <h3 className="font-semibold">{event.name}</h3>
           <p className="mt-1 text-sm text-stone-600">
             {formatEventDate(event.date)} · {event.location}
@@ -277,7 +277,7 @@ function JoinedCard({
                     name="attendance"
                     value={value}
                     defaultChecked={participant.attendance === value}
-                    className="h-4 w-4 accent-emerald-700"
+                    className="h-4 w-4 accent-green-700"
                   />
                   {attendanceLabel(value)}
                 </label>

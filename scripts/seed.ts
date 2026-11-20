@@ -16,28 +16,38 @@ async function main() {
     budget: 25,
     stealLimit: 3,
     rules: "Wrapped gifts only. No electronics over $10.",
-    organizer: { name: "Demo Organizer", email: "organizer@example.com" },
+    organizer: {
+      name: "Demo Organizer",
+      email: "organizer@example.com",
+      phone: "",
+    },
   });
 
   const people = [
     {
       name: "Alex Rivera",
       email: "alex@example.com",
+      phone: "",
       department: "Engineering",
       attendance: "in_person" as const,
+      interests: "plants, cycling, sci-fi novels",
       giftTeaser: "Something for a plant lover",
     },
     {
       name: "Priya Shah",
-      email: "priya@example.com",
+      email: "",
+      phone: "+15555550123",
       department: "Support",
       attendance: "remote" as const,
+      interests: "baking, yoga, true crime podcasts",
     },
     {
       name: "Sam Okafor",
       email: "sam@example.com",
+      phone: "",
       department: "Sales",
       attendance: "in_person" as const,
+      interests: "coffee, board games",
       giftTeaser: "Snacks, probably",
     },
   ];

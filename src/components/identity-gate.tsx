@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent, type ReactNode } from "react";
+import { isValidEmail, isValidPhone, parseContact } from "@/lib/identity-match";
 import { useIdentity } from "@/lib/use-identity";
 import type { Identity } from "@/lib/types";
 import { Alert, Button, Card, Field, inputClass } from "./ui";
@@ -12,7 +13,7 @@ type GateProps = {
 };
 
 /**
- * Shows the children once the visitor has entered a name and email.
+ * Shows the children once the visitor has entered a name and an email or phone.
  * This is not a login. The details are only remembered in this browser.
  */
 export function IdentityGate({ title, description, children }: GateProps) {
@@ -41,23 +42,31 @@ function IdentityForm({
   onSubmit: (identity: Identity) => void;
 }) {
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [contact, setContact] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const cleanName = name.trim();
-    const cleanEmail = email.trim();
     if (!cleanName) {
       setError("Enter your name.");
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    const { email, phone } = parseContact(contact);
+    if (!email && !phone) {
+      setError("Enter an email address or phone number.");
+      return;
+    }
+    if (email && !isValidEmail(email)) {
       setError("Enter a valid email address.");
       return;
     }
+    if (phone && !isValidPhone(phone)) {
+      setError("Enter a valid phone number.");
+      return;
+    }
     setError(null);
-    onSubmit({ name: cleanName, email: cleanEmail });
+    onSubmit({ name: cleanName, email, phone });
   }
 
   return (
@@ -65,7 +74,7 @@ function IdentityForm({
       <h2 className="font-semibold">{title}</h2>
       <p className="mt-1 text-sm text-stone-600">{description}</p>
       <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-        <Field label="Your name">
+        <Field label="Full name">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -74,12 +83,12 @@ function IdentityForm({
             className={inputClass}
           />
         </Field>
-        <Field label="Your email">
+        <Field label="Email or phone number">
           <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={contact}
+            onChange={(e) => setContact(e.target.value)}
             autoComplete="email"
+            inputMode="email"
             maxLength={200}
             className={inputClass}
           />

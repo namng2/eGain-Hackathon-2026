@@ -64,9 +64,12 @@ npm run seed     # adds a demo event with a few participants (run again = anothe
 - **Errors** are returned as `{ "error": "message" }` with status 400 (bad
   input), 403 (not allowed), 404 (not found), or 409 (conflict, e.g. sign-ups
   closed or email already used under a different name).
-- **Emails are trimmed and lowercased** before storage. Names are trimmed and
-  whitespace-collapsed. A name + email "matches" when both are equal,
-  ignoring case.
+- **Emails are trimmed and lowercased** before storage. Phone numbers keep
+ only digits (and a leading `+`). Names are trimmed and whitespace-collapsed.
+ Participants identify with a name + email, or a name + phone. A name +
+ contact "matches" when the name is equal (ignoring case) and the email, or
+ else the phone, is equal. Use `contactKey` and `identitiesMatch` from
+ `src/lib/identity-match.ts`. Organizers must have an email.
 - **Organizer-only actions** check the request's identity against
   `event.organizer` with `identitiesMatch`. Participant actions check against
   the participant record. Organizers may also edit or remove any participant.
