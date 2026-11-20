@@ -1,0 +1,101 @@
+# AGENTS.md — White Elephant
+
+Guide for anyone (human or automated tool) working in this repo.
+
+## What this is
+
+A web app for running an office **white elephant gift exchange**.
+
+1. An organizer creates an event and gets a **share link** (`/join/<eventId>`).
+2. Colleagues open the link and **sign up** with a form.
+3. Everyone **manages their own entry** on the account page.
+
+Current scope is a **first draft**:
+
+- **No login.** "Who you are" is just a name + email typed into the browser.
+  Anyone who knows someone's name + email can act as them. Do not treat this
+  as secure. Real auth is a planned follow-up.
+- **No database.** Data lives in `data/store.json` on the server. It is
+  gitignored and created on first write.
+- **Game play is not built yet.** No draw order, gift opening, or stealing.
+
+## Stack
+
+- Next.js 16 (App Router), React 19, TypeScript (strict)
+- Tailwind CSS v4
+- zod for request validation, nanoid for event IDs
+- Node 22+
+
+## Commands
+
+```bash
+npm install
+npm run dev      # http://localhost:3000
+npm run build
+npm run lint
+npm run seed     # adds a demo event with a few participants (run again = another demo event)
+```
+
+## Layout
+
+| Path | Purpose |
+| --- | --- |
+| `src/app/` | Pages (`page.tsx`) and API route handlers (`api/**/route.ts`) |
+| `src/app/join/[eventId]` | Public share-link sign-up page (server component) |
+| `src/app/events/[eventId]/manage` | Organizer dashboard (client, gated by name + email) |
+| `src/app/account` | "My account" page (client, gated by name + email) |
+| `src/components/` | Shared UI: forms, buttons, the identity gate, copy-link button |
+| `src/lib/store.ts` | **The only file that touches storage.** Swap this for a DB later. |
+| `src/lib/types.ts` | Shared data types |
+| `src/lib/validation.ts` | zod schemas for every request body |
+| `src/lib/identity-match.ts` | Name + email matching and normalization |
+| `src/lib/use-identity.ts` | Client hook that remembers name + email in `localStorage` |
+| `src/lib/public-event.ts` | Strips the organizer's email before an event is sent to a client |
+| `src/lib/api.ts` | `parseBody` and `apiError` helpers for route handlers |
+| `src/lib/client-api.ts` | `callApi` fetch wrapper for client components |
+| `scripts/seed.ts` | Demo data script |
+
+## Conventions
+
+- **Storage stays behind `src/lib/store.ts`.** Pages and route handlers call
+  its functions and never read `data/store.json` directly.
+- **Validate every request body** with a schema from `src/lib/validation.ts`
+  using `parseBody`. Never trust raw `request.json()`.
+- **Errors** are returned as `{ "error": "message" }` with status 400 (bad
+  input), 403 (not allowed), 404 (not found), or 409 (conflict, e.g. sign-ups
+  closed or email already used under a different name).
+- **Emails are trimmed and lowercased** before storage. Names are trimmed and
+  whitespace-collapsed. A name + email "matches" when both are equal,
+  ignoring case.
+- **Organizer-only actions** check the request's identity against
+  `event.organizer` with `identitiesMatch`. Participant actions check against
+  the participant record. Organizers may also edit or remove any participant.
+- **Event dates** are stored as typed `YYYY-MM-DDTHH:mm` strings with no
+  timezone. Format them with `formatEventDate` so the time reads the same for
+  everyone.
+- **Organizer roster** is loaded with `POST /api/events/[eventId]/roster`
+  (not GET) so the organizer's email is not put in the URL.
+- **Public event data** must go through `toPublicEvent` before it reaches the
+  client. Never send `organizer.email` or other participants' emails to a
+  page that anyone with the link can see.
+
+## Next.js notes (this version)
+
+This is Next 16 with `cacheComponents: true` in `next.config.ts`. Before
+changing routing, caching, or data fetching, read the matching guide in
+`node_modules/next/dist/docs/`. Key points:
+
+- Reading request-time data (params, cookies, the database/file store) in a
+  server component needs a `<Suspense>` boundary around it, or the build fails.
+  The join page and the manage/account gates show this pattern.
+- Client components must not read `localStorage` during render. Use
+  `useIdentity()`, which waits for the browser before reporting `ready`.
+- Call `notFound()` for missing events. It works inside `<Suspense>`.
+
+## Before you open a PR
+
+- `npm run lint` and `npm run build` both pass.
+- Walk through the flow in a browser: create an event, join it from the link
+  (in a second browser profile or private window), edit your entry, then
+  check the organizer's dashboard and the closed-sign-ups state.
+- Do not commit `data/`, `.env*`, or `node_modules/`.
