@@ -18,7 +18,30 @@ Current scope is a **first draft**:
 - **No database.** Data lives in `data/store.json` on the server. It is
   gitignored and created on first write.
 - **Interests poll and gift ideas** exist. See "Interests poll" under Conventions.
-- **Game play is not built yet.** No draw order, gift opening, or stealing.
+- **Game rules exist, but aren't connected yet.** `src/lib/game.ts` runs a
+  game (turn order, opening, stealing, freezing, final steal), but nothing
+  saves a game or exposes it through routes or pages yet.
+
+## Game rules (`src/lib/game.ts`)
+
+- Every player brings one gift. Turn order is shuffled at the start.
+- On a turn, a player opens any wrapped gift, or steals an opened gift from
+  someone else. The person stolen from acts next, out of turn order.
+- A gift is frozen once it has been stolen `event.stealLimit` times.
+- A player can't steal back the gift that was just taken from them on their
+  very next action.
+- Once every gift is open, one randomly chosen player (picked at the start)
+  may swap their gift for any unfrozen gift, or pass. Then the game ends.
+
+The engine is pure: `startGame` builds a `GameState`, `getAvailableMoves`
+says what the current player may do, and `applyMove` returns a new state or
+throws a `GameRuleError` whose message can be shown to players. Return those
+errors as 409.
+
+Gifts can carry a `name`. Always send a game to players through
+`toPlayerView`, which hides the names of gifts that are still wrapped.
+
+To watch a random game play out in the terminal: `npx tsx scripts/try-game.ts`.
 
 ## Stack
 
@@ -34,6 +57,7 @@ npm install
 npm run dev      # http://localhost:3000
 npm run build
 npm run lint
+npm test         # game rule tests
 npm run seed     # adds a demo event with a few participants (run again = another demo event)
 ```
 
@@ -48,6 +72,8 @@ npm run seed     # adds a demo event with a few participants (run again = anothe
 | `src/components/` | Shared UI: forms, buttons, the identity gate, copy-link button |
 | `src/lib/store.ts` | **The only file that touches storage.** Swap this for a DB later. |
 | `src/lib/types.ts` | Shared data types |
+| `src/lib/game.ts` | Game rules: turn order, open, steal, freeze, final steal |
+| `src/lib/game.test.ts` | Tests for the game rules (`npm test`) |
 | `src/lib/validation.ts` | zod schemas for every request body |
 | `src/lib/identity-match.ts` | Name + email matching and normalization |
 | `src/lib/use-identity.ts` | Client hook that remembers name + email in `localStorage` |
@@ -109,7 +135,7 @@ changing routing, caching, or data fetching, read the matching guide in
 
 ## Before you open a PR
 
-- `npm run lint` and `npm run build` both pass.
+- `npm run lint`, `npm test`, and `npm run build` all pass.
 - Walk through the flow in a browser: create an event, join it from the link
   (in a second browser profile or private window), edit your entry, then
   check the organizer's dashboard and the closed-sign-ups state.
