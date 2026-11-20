@@ -96,6 +96,9 @@ function SignUpForm({
           </p>
         </Alert>
         <div className="mt-4 flex flex-wrap gap-3">
+          <Link href={`/events/${eventId}/chat`} className={buttonClasses("primary")}>
+            Open the group chat
+          </Link>
           <Link href="/account" className={buttonClasses("secondary")}>
             Go to my account
           </Link>

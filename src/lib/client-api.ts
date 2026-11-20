@@ -19,6 +19,16 @@ export async function callApi<T>(
     headers: { "Content-Type": "application/json" },
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
   });
+  return readResponse<T>(response);
+}
+
+/** Posts a FormData body (for file uploads). The browser sets the multipart headers. */
+export async function callApiForm<T>(url: string, form: FormData): Promise<T> {
+  const response = await fetch(url, { method: "POST", body: form });
+  return readResponse<T>(response);
+}
+
+async function readResponse<T>(response: Response): Promise<T> {
   const data = (await response.json().catch(() => ({}))) as {
     error?: string;
   };

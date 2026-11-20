@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
 import { toCsv } from "@/lib/csv";
 import { callApi } from "@/lib/client-api";
@@ -16,7 +17,7 @@ import { CopyLinkButton } from "./copy-link-button";
 import { EventFields, eventFromForm } from "./event-fields";
 import { IdentityGate } from "./identity-gate";
 import { PollPanel } from "./poll-panel";
-import { Alert, Button, Card, StatusBadge, inputClass } from "./ui";
+import { Alert, Button, Card, StatusBadge, buttonClasses, inputClass } from "./ui";
 
 type Roster = { event: PublicEvent; participants: Participant[] };
 type Notice = { tone: "success" | "error"; text: string };
@@ -246,6 +247,12 @@ function ManageView({
             >
               {event.status === "open" ? "Close sign-ups" : "Reopen sign-ups"}
             </Button>
+            <Link
+              href={`/events/${eventId}/chat`}
+              className={buttonClasses("secondary")}
+            >
+              Group chat
+            </Link>
             <Button
               variant="secondary"
               onClick={exportCsv}

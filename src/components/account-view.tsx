@@ -155,12 +155,20 @@ function OrganizerCard({ event }: { event: PublicEvent }) {
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-stone-600">{event.participantCount} signed up</p>
-        <Link
-          href={`/events/${event.id}/manage`}
-          className={buttonClasses("secondary")}
-        >
-          Manage event
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={`/events/${event.id}/chat`}
+            className={buttonClasses("secondary")}
+          >
+            Group chat
+          </Link>
+          <Link
+            href={`/events/${event.id}/manage`}
+            className={buttonClasses("secondary")}
+          >
+            Manage event
+          </Link>
+        </div>
       </div>
     </Card>
   );
@@ -315,7 +323,13 @@ function JoinedCard({
           <p className="text-sm text-stone-500">
             {locked ? "Sign-ups are closed, so your entry is locked." : ""}
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href={`/events/${event.id}/chat`}
+              className={buttonClasses("secondary")}
+            >
+              Group chat
+            </Link>
             <Button
               variant="secondary"
               disabled={locked || busy}

@@ -32,6 +32,7 @@ npm run seed       # adds "Holiday White Elephant 2026" with three sign-ups
 | `/join/<eventId>` | Anyone with the link | Event details and sign-up form |
 | `/events/<eventId>/manage` | Organizer | Share link, sign-up controls, event details, participant list, CSV export |
 | `/account` | Anyone | Events you organize and events you joined. Edit or leave your entry. |
+| `/events/<eventId>/chat` | Organizer and people signed up | Group chat for the event, with optional images |
 
 ## Interests poll and gift ideas
 
@@ -44,10 +45,16 @@ When the organizer **closes sign-ups**, the app turns the poll into up to 6 **gi
 There are no passwords or accounts. "Who you are" is the **name and email** you type, which the browser remembers.
 Anyone who knows someone's name and email can act as them. Do not use this for anything sensitive. Real sign-in is the next step.
 
+## Group chat
+
+Each event has a group chat at `/events/<eventId>/chat`, linked from the organizer dashboard, the account page, and the sign-up confirmation. The organizer and everyone signed up can read and post. Messages can include text (up to 1000 characters), one image (JPEG, PNG, GIF, or WebP, up to 5 MB), or both. The chat refreshes itself about every 3 seconds. You can delete your own messages, and the organizer can delete any message. The chat stays open after sign-ups close.
+
+Access is checked by name and email like the rest of the app, so it is only as private as that is: anyone who knows a participant's name and email can read the chat.
+
 ## Where data is stored
 
-Everything is in one JSON file: `data/store.json`, created on first write. The folder is gitignored.
-Delete the file to start over.
+Everything is in one JSON file: `data/store.json`, created on first write. Chat images are saved as files in `data/uploads/`. The whole `data/` folder is gitignored.
+Delete the folder to start over.
 
 All reads and writes go through `src/lib/store.ts`. Replacing that file with a database later should not require changes to pages or API routes.
 
@@ -76,6 +83,10 @@ See [AGENTS.md](AGENTS.md) for conventions and notes for contributors.
 | `PATCH /api/participants/:id` | Participant or organizer | Change an entry (blocked when sign-ups are closed, except for the organizer) |
 | `DELETE /api/participants/:id` | Participant or organizer | Leave an event, or remove someone |
 | `POST /api/account` | Anyone (with name and email) | Events organized and joined |
+| `POST /api/events/:id/chat` | Organizer or participant | Read the latest chat messages (no emails) |
+| `POST /api/events/:id/chat/messages` | Organizer or participant | Post a message (multipart form: name, email, text, optional image) |
+| `DELETE /api/events/:id/chat/messages/:messageId` | Author or organizer | Delete a message and its image |
+| `GET /api/events/:id/chat/images/:imageId` | Anyone with the image link | Serve a chat image |
 
 Errors are returned as `{ "error": "..." }` with status 400, 403, 404, or 409.
 

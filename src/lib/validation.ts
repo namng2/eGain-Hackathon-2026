@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { INTERESTS } from "./gift-catalog";
 import { normalizeEmail, normalizeName } from "./identity-match";
+import { MAX_CHAT_TEXT } from "./public-chat";
 
 const name = z
   .string()
@@ -88,6 +89,17 @@ export const updateParticipantSchema = z.object({
 });
 
 export const identityOnlySchema = z.object({ identity: identitySchema });
+
+// A message needs text or an image. The route checks the image side.
+export const sendMessageSchema = z.object({
+  identity: identitySchema,
+  text: z
+    .string()
+    .trim()
+    .max(MAX_CHAT_TEXT, `Messages can be up to ${MAX_CHAT_TEXT} characters`)
+    .optional()
+    .transform((v) => (v ? v : undefined)),
+});
 
 /** Returns the first validation message, for showing next to a form. */
 export function firstIssue(error: z.ZodError): string {

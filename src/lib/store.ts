@@ -8,18 +8,23 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { customAlphabet, nanoid } from "nanoid";
+import { imageTypeForExt, isImageId } from "./chat-image";
 import { isInterest } from "./gift-catalog";
 import { normalizeEmail } from "./identity-match";
-import type { GiftEvent, Participant } from "./types";
+import type { ChatMessage, GiftEvent, Participant } from "./types";
 
 type StoreData = {
   events: GiftEvent[];
   participants: Participant[];
+  messages: ChatMessage[];
 };
 
 const DATA_FILE =
   process.env.WHITE_ELEPHANT_DATA_FILE ??
   path.join(process.cwd(), "data", "store.json");
+
+// Chat images are saved as files next to the data file: data/uploads/<id>.<ext>
+const UPLOAD_DIR = path.join(path.dirname(DATA_FILE), "uploads");
 
 // Short, unambiguous IDs for share links, e.g. /join/k3x9p2qa
 const newEventId = customAlphabet("23456789abcdefghjkmnpqrstuvwxyz", 8);
@@ -39,10 +44,11 @@ async function readData(): Promise<StoreData> {
         ...p,
         interests: (p.interests ?? []).filter(isInterest),
       })),
+      messages: parsed.messages ?? [],
     };
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-      return { events: [], participants: [] };
+      return { events: [], participants: [], messages: [] };
     }
     throw err;
   }
@@ -225,4 +231,101 @@ export function removeParticipant(id: string): Promise<boolean> {
     data.participants = data.participants.filter((p) => p.id !== id);
     return data.participants.length < before;
   });
+}
+
+// ---------- Chat ----------
+
+export type NewMessage = Pick<
+  ChatMessage,
+  "eventId" | "authorName" | "authorEmail" | "text" | "image"
+>;
+
+export function addMessage(input: NewMessage): Promise<ChatMessage> {
+  return mutate((data) => {
+    const message: ChatMessage = {
+      ...input,
+      authorEmail: normalizeEmail(input.authorEmail),
+      id: nanoid(12),
+      createdAt: new Date().toISOString(),
+    };
+    data.messages.push(message);
+    return message;
+  });
+}
+
+/** The newest `limit` messages for an event, oldest first. */
+export async function listMessages(
+  eventId: string,
+  limit = 200,
+): Promise<ChatMessage[]> {
+  const data = await readData();
+  return data.messages.filter((m) => m.eventId === eventId).slice(-limit);
+}
+
+export async function getMessage(id: string): Promise<ChatMessage | undefined> {
+  const data = await readData();
+  return data.messages.find((m) => m.id === id);
+}
+
+/** Removes a message and returns it, or undefined if it wasn't there. */
+export function removeMessage(id: string): Promise<ChatMessage | undefined> {
+  return mutate((data) => {
+    const found = data.messages.find((m) => m.id === id);
+    if (found) data.messages = data.messages.filter((m) => m.id !== id);
+    return found;
+  });
+}
+
+/** Finds the message that owns an image, within one event. */
+export async function findMessageByImage(
+  eventId: string,
+  imageId: string,
+): Promise<ChatMessage | undefined> {
+  const data = await readData();
+  return data.messages.find(
+    (m) => m.eventId === eventId && m.image?.id === imageId,
+  );
+}
+
+function imagePath(id: string, ext: string): string | undefined {
+  // Only ids and extensions we made ourselves ever reach the file system.
+  if (!isImageId(id) || !imageTypeForExt(ext)) return undefined;
+  return path.join(UPLOAD_DIR, `${id}.${ext}`);
+}
+
+/** Saves image bytes to disk and returns the new image id. */
+export async function saveChatImage(
+  bytes: Uint8Array,
+  ext: string,
+): Promise<string> {
+  const id = nanoid();
+  const file = imagePath(id, ext);
+  if (!file) throw new Error("Unsupported image type");
+  await fs.mkdir(/* turbopackIgnore: true */ UPLOAD_DIR, { recursive: true });
+  await fs.writeFile(/* turbopackIgnore: true */ file, bytes, { flag: "wx" });
+  return id;
+}
+
+export async function readChatImage(
+  id: string,
+  ext: string,
+): Promise<Uint8Array | undefined> {
+  const file = imagePath(id, ext);
+  if (!file) return undefined;
+  try {
+    return new Uint8Array(await fs.readFile(/* turbopackIgnore: true */ file));
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw err;
+  }
+}
+
+export async function deleteChatImage(id: string, ext: string): Promise<void> {
+  const file = imagePath(id, ext);
+  if (!file) return;
+  try {
+    await fs.unlink(/* turbopackIgnore: true */ file);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+  }
 }

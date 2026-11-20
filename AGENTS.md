@@ -120,6 +120,20 @@ npm run seed     # adds a demo event with a few participants (run again = anothe
   spread participant records into it, so emails cannot leak. Gift ideas are
   hidden while sign-ups are open.
 
+- **Group chat.** Messages live in `store.json` (`messages`), and images are
+  files in `data/uploads/` (next to the data file), both written only through
+  `src/lib/store.ts`. Only the organizer and signed-up participants may read or
+  post: every chat route calls `loadChatAccess` in `src/lib/chat-access.ts`
+  (name + email, not real auth). Reading is `POST` so emails stay out of URLs.
+  Sending is multipart form data parsed by `parseMessageForm`. Always send
+  messages to a client through `toPublicMessage`, never `authorEmail`.
+- **Chat images.** The type is detected from the file's first bytes with
+  `detectImageType` (`src/lib/chat-image.ts`), never from the name or the
+  browser's type. Only JPEG, PNG, GIF, and WebP up to 5 MB are saved, never SVG.
+  Image ids are checked with `isImageId` before they touch the file system. The
+  image URL is served without a name + email check (an `<img>` tag can't send
+  one), so the unguessable id is the key.
+
 ## Next.js notes (this version)
 
 This is Next 16 with `cacheComponents: true` in `next.config.ts`. Before

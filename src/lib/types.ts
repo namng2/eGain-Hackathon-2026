@@ -80,6 +80,30 @@ export type AccountSummary = {
   joined: Participation[];
 };
 
+// ---------- Group chat ----------
+
+export type ChatMessage = {
+  id: string;
+  eventId: string;
+  authorName: string;
+  /** Server-only. Never send this to a client (use toPublicMessage). */
+  authorEmail: string;
+  text?: string;
+  image?: { id: string; ext: string };
+  createdAt: string;
+};
+
+/** A chat message as shown to people in the chat. No email. */
+export type PublicChatMessage = {
+  id: string;
+  authorName: string;
+  text?: string;
+  imageUrl?: string;
+  createdAt: string;
+};
+
+export type ChatRole = "organizer" | "participant";
+
 // ---------- Game play ----------
 
 export type GamePhase = "playing" | "final" | "finished";

@@ -5,7 +5,7 @@
  *
  * Running it again adds another demo event (it does not replace the old one).
  */
-import { createEvent, upsertParticipant } from "../src/lib/store";
+import { addMessage, createEvent, upsertParticipant } from "../src/lib/store";
 
 async function main() {
   const event = await createEvent({
@@ -47,6 +47,19 @@ async function main() {
   for (const person of people) {
     await upsertParticipant(event.id, person);
   }
+
+  await addMessage({
+    eventId: event.id,
+    authorName: "Demo Organizer",
+    authorEmail: "organizer@example.com",
+    text: "Welcome! Use this chat to coordinate before the swap.",
+  });
+  await addMessage({
+    eventId: event.id,
+    authorName: "Alex Rivera",
+    authorEmail: "alex@example.com",
+    text: "Excited! Is anyone coming in remotely?",
+  });
 
   console.log(`Created "${event.name}" with ${people.length} sign-ups.`);
   console.log(`Share link path: /join/${event.id}`);
