@@ -35,9 +35,9 @@ npm run seed       # adds "Holiday White Elephant 2026" with three sign-ups
 
 ## Interests poll and gift ideas
 
-When signing up, people can list up to 8 **interests and hobbies**, separated by commas. Everyone with the share link sees the poll on the join page: the top interests, and each person's name with their interests. Emails are never shown.
+When signing up, people **pick up to 8 interests and hobbies from a fixed list** (coffee, hiking, board games, and so on). They can change their picks and gift hint later from the account page, until the organizer closes sign-ups. Everyone with the share link sees the poll on the join page: the top interests, and each person's name with their interests. Emails are never shown.
 
-When the organizer **closes sign-ups**, the app turns the poll into up to 6 **gift ideas** within the event budget, picked from a built-in sample catalog (`src/lib/gift-catalog.ts`). Each idea has an emoji tile and a link to an Amazon search. There are no real product photos, prices, or affiliate tags. Reopening and closing again regenerates the ideas from the latest answers.
+When the organizer **closes sign-ups**, the app turns the poll into up to 6 **gift ideas** within the event budget, picked from a built-in sample catalog (`src/lib/gift-catalog.ts`), scored by how many people picked the interests each gift is tagged with. To add an interest option, add it to `INTERESTS` there and tag at least one gift with it. Each idea has an emoji tile and a link to an Amazon search. There are no real product photos, prices, or affiliate tags. Reopening and closing again regenerates the ideas from the latest answers.
 
 ## Important: no login yet
 

@@ -30,12 +30,6 @@ export function tallyInterests(
     .slice(0, TALLY_SIZE);
 }
 
-// "hike" and "hikes" should match; this is deliberately light, not stemming.
-function sameTopic(interest: string, tag: string): boolean {
-  const strip = (s: string) => s.replace(/s$/, "");
-  return interest === tag || strip(interest) === strip(tag);
-}
-
 function slug(title: string): string {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
@@ -54,8 +48,9 @@ function toIdea(gift: CatalogGift, matchedInterests: string[]): GiftIdea {
 
 /**
  * Picks up to 6 gifts within budget, best match first. A gift scores the sum of
- * the poll counts of the interests it matches. If nothing matches, the
- * cheapest in-budget gifts are returned so the list is never empty.
+ * the poll counts of the interests it matches. Interests are a fixed list, so
+ * matching is exact. If nothing matches (usually because nobody picked any
+ * interests), the cheapest in-budget gifts are returned so the list is never empty.
  */
 export function suggestGifts(
   tally: InterestCount[],
@@ -67,7 +62,7 @@ export function suggestGifts(
   const scored = affordable
     .map((gift) => {
       const matches = tally.filter(({ interest }) =>
-        gift.interests.some((tag) => sameTopic(interest, tag)),
+        (gift.interests as string[]).includes(interest),
       );
       return {
         gift,

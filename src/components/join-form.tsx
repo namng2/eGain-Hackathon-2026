@@ -8,6 +8,7 @@ import { callApi } from "@/lib/client-api";
 import { errorText } from "@/lib/errors";
 import { useIdentity } from "@/lib/use-identity";
 import type { Attendance, Identity, Participant, PublicEvent } from "@/lib/types";
+import { InterestPicker } from "./interest-picker";
 import { Alert, Button, Card, Field, buttonClasses, inputClass } from "./ui";
 
 export function JoinForm({ event }: { event: PublicEvent }) {
@@ -46,7 +47,7 @@ function SignUpForm({
   const [department, setDepartment] = useState("");
   const [attendance, setAttendance] = useState<Attendance>("in_person");
   const [giftTeaser, setGiftTeaser] = useState("");
-  const [interests, setInterests] = useState("");
+  const [interests, setInterests] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<boolean | null>(null);
@@ -66,7 +67,7 @@ function SignUpForm({
             department,
             attendance,
             giftTeaser,
-            interests: interests.split(","),
+            interests,
           },
         },
       );
@@ -111,6 +112,13 @@ function SignUpForm({
       <h2 className="text-lg font-semibold">Sign up</h2>
       <p className="mt-1 text-sm text-stone-600">
         Use the same name and email each time. That&apos;s how we know it&apos;s you.
+      </p>
+      <p className="mt-1 text-sm text-stone-600">
+        You can edit your gift hint and interests later from{" "}
+        <Link href="/account" className="font-medium text-emerald-800 underline">
+          My account
+        </Link>
+        , until the organizer closes sign-ups.
       </p>
       <form onSubmit={handleSubmit} className="mt-5 space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -169,7 +177,7 @@ function SignUpForm({
 
         <Field
           label="Gift hint (optional)"
-          hint="A short hint about your gift. The organizer can see it."
+          hint="A short hint about your gift. The organizer can see it. You can edit it later."
         >
           <input
             value={giftTeaser}
@@ -179,17 +187,7 @@ function SignUpForm({
           />
         </Field>
 
-        <Field
-          label="Interests and hobbies (optional)"
-          hint="Up to 8, separated by commas, e.g. coffee, hiking, board games. Everyone at the event can see them, and they help pick gift ideas."
-        >
-          <input
-            value={interests}
-            onChange={(e) => setInterests(e.target.value)}
-            maxLength={300}
-            className={inputClass}
-          />
-        </Field>
+        <InterestPicker value={interests} onChange={setInterests} />
 
         {error ? <Alert tone="error">{error}</Alert> : null}
         <div className="flex justify-end">

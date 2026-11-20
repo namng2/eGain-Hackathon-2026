@@ -80,8 +80,10 @@ npm run seed     # adds a demo event with a few participants (run again = anothe
   client. Never send `organizer.email` or other participants' emails to a
   page that anyone with the link can see.
 
-- **Interests poll.** Participants have `interests: string[]`, normalized with
-  `normalizeInterest` (trimmed, lowercased, up to 8, each up to 30 characters).
+- **Interests poll.** Participants have `interests: string[]`, chosen from the
+  fixed `INTERESTS` list in `src/lib/gift-catalog.ts` (up to 8, no free text;
+  validation rejects anything else, and `store.ts` drops unknown values on read).
+  Every catalog gift is tagged with `INTERESTS` values, so matching is exact.
   When the organizer sets `status: "closed"` in `PATCH /api/events/[eventId]`,
   the route runs `buildGiftIdeas` and saves `giftIdeas` and `giftIdeasAt` on the
   event; closing again regenerates them. `suggestGifts` and `tallyInterests` in

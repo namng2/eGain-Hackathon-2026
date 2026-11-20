@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { normalizeInterest } from "./gift-suggestions";
+import { INTERESTS } from "./gift-catalog";
 import { normalizeEmail, normalizeName } from "./identity-match";
 
 const name = z
@@ -55,21 +55,14 @@ export const updateEventSchema = z.object({
 });
 
 const MAX_INTERESTS = 8;
-const MAX_INTEREST_LENGTH = 30;
 
-// Each entry is normalized, cut to 30 characters, and empty or repeated
-// entries are dropped. More than 8 left after that is an error.
+// Interests must come from the fixed list. Repeats are dropped, and more than
+// 8 left after that is an error.
 const interests = z
-  .array(z.string())
-  .transform((items) => [
-    ...new Set(
-      items
-        .map((item) => normalizeInterest(item).slice(0, MAX_INTEREST_LENGTH).trim())
-        .filter(Boolean),
-    ),
-  ])
+  .array(z.enum(INTERESTS, { error: "Choose interests from the list" }))
+  .transform((items) => [...new Set(items)])
   .refine((items) => items.length <= MAX_INTERESTS, {
-    message: `List up to ${MAX_INTERESTS} interests`,
+    message: `Pick up to ${MAX_INTERESTS} interests`,
   });
 
 const participantFields = {

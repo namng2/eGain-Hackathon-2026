@@ -33,7 +33,7 @@ export function PollPanel({
                 key={interest}
                 className="rounded-full bg-emerald-50 px-3 py-1 text-sm text-emerald-900 ring-1 ring-inset ring-emerald-200"
               >
-                {interest}
+                <span className="capitalize">{interest}</span>
                 <span className="ml-1.5 font-semibold">{count}</span>
               </li>
             ))}
@@ -48,7 +48,9 @@ export function PollPanel({
                 <span className="font-medium text-stone-900 sm:w-40 sm:shrink-0">
                   {person.name}
                 </span>
-                <span className="text-stone-600">{person.interests.join(", ")}</span>
+                <span className="capitalize text-stone-600">
+                  {person.interests.join(", ")}
+                </span>
               </li>
             ))}
           </ul>
@@ -85,7 +87,7 @@ function GiftIdeaCard({ idea }: { idea: GiftIdea }) {
           About {idea.priceLabel}
           {idea.matchedInterests.length > 0
             ? ` · for ${idea.matchedInterests.join(", ")}`
-            : " · fits the budget"}
+            : " · budget pick, since no interests were chosen"}
         </p>
         <a
           href={amazonSearchUrl(idea.searchQuery)}

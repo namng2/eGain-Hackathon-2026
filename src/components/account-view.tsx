@@ -7,6 +7,7 @@ import { errorText } from "@/lib/errors";
 import { attendanceLabel, formatEventDate } from "@/lib/format";
 import type { AccountSummary, Identity, Participant, PublicEvent } from "@/lib/types";
 import { IdentityGate } from "./identity-gate";
+import { InterestPicker } from "./interest-picker";
 import {
   Alert,
   Button,
@@ -177,6 +178,7 @@ function JoinedCard({
   onChanged: () => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const [interests, setInterests] = useState<string[]>(participant.interests);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const locked = event.status === "closed";
@@ -195,7 +197,7 @@ function JoinedCard({
             department: String(form.get("department") ?? ""),
             attendance: String(form.get("attendance") ?? "in_person"),
             giftTeaser: String(form.get("giftTeaser") ?? ""),
-            interests: String(form.get("interests") ?? "").split(","),
+            interests,
           },
         },
       });
@@ -298,17 +300,7 @@ function JoinedCard({
               className={inputClass}
             />
           </Field>
-          <Field
-            label="Interests and hobbies (optional)"
-            hint="Up to 8, separated by commas, e.g. coffee, hiking, board games."
-          >
-            <input
-              name="interests"
-              defaultValue={participant.interests.join(", ")}
-              maxLength={300}
-              className={inputClass}
-            />
-          </Field>
+          <InterestPicker value={interests} onChange={setInterests} />
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setEditing(false)}>
               Cancel
@@ -327,7 +319,10 @@ function JoinedCard({
             <Button
               variant="secondary"
               disabled={locked || busy}
-              onClick={() => setEditing(true)}
+              onClick={() => {
+                setInterests(participant.interests);
+                setEditing(true);
+              }}
             >
               Edit
             </Button>
