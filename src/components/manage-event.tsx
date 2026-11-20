@@ -7,13 +7,15 @@ import { errorText } from "@/lib/errors";
 import {
   attendanceLabel,
   formatBudget,
+  formatDateTime,
   formatEventDate,
   formatJoinedDate,
 } from "@/lib/format";
-import type { Identity, Participant, PublicEvent } from "@/lib/types";
+import type { Identity, Participant, PollData, PublicEvent } from "@/lib/types";
 import { CopyLinkButton } from "./copy-link-button";
 import { EventFields, eventFromForm } from "./event-fields";
 import { IdentityGate } from "./identity-gate";
+import { PollPanel } from "./poll-panel";
 import { Alert, Button, Card, StatusBadge, inputClass } from "./ui";
 
 type Roster = { event: PublicEvent; participants: Participant[] };
@@ -55,6 +57,7 @@ function ManageView({
 }) {
   const origin = useOrigin();
   const [roster, setRoster] = useState<Roster | null>(null);
+  const [poll, setPoll] = useState<PollData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [busy, setBusy] = useState(false);
@@ -73,6 +76,14 @@ function ManageView({
       },
       (err: unknown) => {
         if (active) setLoadError(errorText(err));
+      },
+    );
+    callApi<PollData>(`/api/events/${eventId}/poll`, { method: "GET" }).then(
+      (data) => {
+        if (active) setPoll(data);
+      },
+      () => {
+        // The poll is a bonus on this page. The roster error above is the one to show.
       },
     );
     return () => {
@@ -245,6 +256,22 @@ function ManageView({
           </div>
         </div>
       </Card>
+
+      {poll ? (
+        <PollPanel
+          poll={poll}
+          note={
+            poll.giftIdeasAt
+              ? `Generated when sign-ups closed on ${formatDateTime(poll.giftIdeasAt)}.`
+              : undefined
+          }
+        />
+      ) : null}
+      {event.status === "open" ? (
+        <p className="-mt-3 text-sm text-stone-500">
+          Gift ideas are generated from the poll when you close sign-ups.
+        </p>
+      ) : null}
 
       <Card>
         <h2 className="font-semibold">Event details</h2>

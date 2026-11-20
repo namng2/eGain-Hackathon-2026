@@ -195,6 +195,7 @@ function JoinedCard({
             department: String(form.get("department") ?? ""),
             attendance: String(form.get("attendance") ?? "in_person"),
             giftTeaser: String(form.get("giftTeaser") ?? ""),
+            interests: String(form.get("interests") ?? "").split(","),
           },
         },
       });
@@ -244,6 +245,11 @@ function JoinedCard({
       {participant.giftTeaser ? (
         <p className="mt-1 text-sm text-stone-600">Gift hint: {participant.giftTeaser}</p>
       ) : null}
+      {participant.interests.length > 0 ? (
+        <p className="mt-1 text-sm text-stone-600">
+          Interests: {participant.interests.join(", ")}
+        </p>
+      ) : null}
 
       {error ? (
         <div className="mt-3">
@@ -289,6 +295,17 @@ function JoinedCard({
               name="giftTeaser"
               defaultValue={participant.giftTeaser}
               maxLength={200}
+              className={inputClass}
+            />
+          </Field>
+          <Field
+            label="Interests and hobbies (optional)"
+            hint="Up to 8, separated by commas, e.g. coffee, hiking, board games."
+          >
+            <input
+              name="interests"
+              defaultValue={participant.interests.join(", ")}
+              maxLength={300}
               className={inputClass}
             />
           </Field>

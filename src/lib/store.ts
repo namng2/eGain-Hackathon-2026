@@ -32,7 +32,11 @@ async function readData(): Promise<StoreData> {
     const parsed = JSON.parse(raw) as Partial<StoreData>;
     return {
       events: parsed.events ?? [],
-      participants: parsed.participants ?? [],
+      // Entries saved before interests existed get an empty list.
+      participants: (parsed.participants ?? []).map((p) => ({
+        ...p,
+        interests: p.interests ?? [],
+      })),
     };
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
@@ -124,7 +128,7 @@ export async function listEventsByOrganizer(
 
 export type ParticipantInput = Omit<Participant, "id" | "eventId" | "joinedAt">;
 export type ParticipantChanges = Partial<
-  Pick<Participant, "department" | "attendance" | "giftTeaser">
+  Pick<Participant, "department" | "attendance" | "giftTeaser" | "interests">
 >;
 
 /**
@@ -152,6 +156,7 @@ export function upsertParticipant(
         department: input.department,
         attendance: input.attendance,
         giftTeaser: input.giftTeaser,
+        interests: input.interests,
       });
       return { participant: existing, created: false };
     }

@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { EventSummary } from "@/components/event-summary";
 import { JoinForm } from "@/components/join-form";
+import { PollPanel } from "@/components/poll-panel";
 import { Card } from "@/components/ui";
+import { getPoll } from "@/lib/poll";
 import { toPublicEvent } from "@/lib/public-event";
 import { countParticipants, getEvent } from "@/lib/store";
 
@@ -23,10 +25,12 @@ async function JoinContent({ params }: Props) {
   if (!event) notFound();
 
   const publicEvent = toPublicEvent(event, await countParticipants(eventId));
+  const poll = await getPoll(eventId);
   return (
     <div className="space-y-6">
       <EventSummary event={publicEvent} />
       <JoinForm event={publicEvent} />
+      {poll ? <PollPanel poll={poll} /> : null}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeInterest } from "./gift-suggestions";
 import { normalizeEmail, normalizeName } from "./identity-match";
 
 const name = z
@@ -53,18 +54,39 @@ export const updateEventSchema = z.object({
     .partial(),
 });
 
+const MAX_INTERESTS = 8;
+const MAX_INTEREST_LENGTH = 30;
+
+// Each entry is normalized, cut to 30 characters, and empty or repeated
+// entries are dropped. More than 8 left after that is an error.
+const interests = z
+  .array(z.string())
+  .transform((items) => [
+    ...new Set(
+      items
+        .map((item) => normalizeInterest(item).slice(0, MAX_INTEREST_LENGTH).trim())
+        .filter(Boolean),
+    ),
+  ])
+  .refine((items) => items.length <= MAX_INTERESTS, {
+    message: `List up to ${MAX_INTERESTS} interests`,
+  });
+
 const participantFields = {
   department: optionalText(80),
   attendance: z.enum(["in_person", "remote"], {
     error: "Choose in person or remote",
   }),
   giftTeaser: optionalText(200),
+  interests: interests.optional(),
 };
 
 export const joinEventSchema = z.object({
   name,
   email,
   ...participantFields,
+  // A new sign-up with no interests stores an empty list.
+  interests: interests.optional().transform((items) => items ?? []),
 });
 
 export const updateParticipantSchema = z.object({

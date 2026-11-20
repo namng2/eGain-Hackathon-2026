@@ -26,12 +26,14 @@ async function main() {
       department: "Engineering",
       attendance: "in_person" as const,
       giftTeaser: "Something for a plant lover",
+      interests: ["gardening", "coffee", "hiking"],
     },
     {
       name: "Priya Shah",
       email: "priya@example.com",
       department: "Support",
       attendance: "remote" as const,
+      interests: ["board games", "coffee", "reading"],
     },
     {
       name: "Sam Okafor",
@@ -39,6 +41,7 @@ async function main() {
       department: "Sales",
       attendance: "in_person" as const,
       giftTeaser: "Snacks, probably",
+      interests: ["cooking", "running", "board games"],
     },
   ];
   for (const person of people) {

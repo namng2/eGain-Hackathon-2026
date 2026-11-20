@@ -46,6 +46,7 @@ function SignUpForm({
   const [department, setDepartment] = useState("");
   const [attendance, setAttendance] = useState<Attendance>("in_person");
   const [giftTeaser, setGiftTeaser] = useState("");
+  const [interests, setInterests] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<boolean | null>(null);
@@ -58,7 +59,16 @@ function SignUpForm({
     try {
       const data = await callApi<{ participant: Participant; created: boolean }>(
         `/api/events/${eventId}/participants`,
-        { body: { name, email, department, attendance, giftTeaser } },
+        {
+          body: {
+            name,
+            email,
+            department,
+            attendance,
+            giftTeaser,
+            interests: interests.split(","),
+          },
+        },
       );
       onSaved({ name: name.trim(), email: email.trim() });
       setCreated(data.created);
@@ -165,6 +175,18 @@ function SignUpForm({
             value={giftTeaser}
             onChange={(e) => setGiftTeaser(e.target.value)}
             maxLength={200}
+            className={inputClass}
+          />
+        </Field>
+
+        <Field
+          label="Interests and hobbies (optional)"
+          hint="Up to 8, separated by commas, e.g. coffee, hiking, board games. Everyone at the event can see them, and they help pick gift ideas."
+        >
+          <input
+            value={interests}
+            onChange={(e) => setInterests(e.target.value)}
+            maxLength={300}
             className={inputClass}
           />
         </Field>

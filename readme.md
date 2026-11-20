@@ -33,6 +33,12 @@ npm run seed       # adds "Holiday White Elephant 2026" with three sign-ups
 | `/events/<eventId>/manage` | Organizer | Share link, sign-up controls, event details, participant list, CSV export |
 | `/account` | Anyone | Events you organize and events you joined. Edit or leave your entry. |
 
+## Interests poll and gift ideas
+
+When signing up, people can list up to 8 **interests and hobbies**, separated by commas. Everyone with the share link sees the poll on the join page: the top interests, and each person's name with their interests. Emails are never shown.
+
+When the organizer **closes sign-ups**, the app turns the poll into up to 6 **gift ideas** within the event budget, picked from a built-in sample catalog (`src/lib/gift-catalog.ts`). Each idea has an emoji tile and a link to an Amazon search. There are no real product photos, prices, or affiliate tags. Reopening and closing again regenerates the ideas from the latest answers.
+
 ## Important: no login yet
 
 There are no passwords or accounts. "Who you are" is the **name and email** you type, which the browser remembers.
@@ -63,7 +69,8 @@ See [AGENTS.md](AGENTS.md) for conventions and notes for contributors.
 | --- | --- | --- |
 | `POST /api/events` | Anyone | Create an event |
 | `GET /api/events/:id` | Anyone | Public event details |
-| `PATCH /api/events/:id` | Organizer | Edit details, open or close sign-ups |
+| `PATCH /api/events/:id` | Organizer | Edit details, open or close sign-ups. Closing also generates gift ideas. |
+| `GET /api/events/:id/poll` | Anyone | Names and interests, top interests, and gift ideas (no emails) |
 | `POST /api/events/:id/roster` | Organizer | Full participant list (includes emails) |
 | `POST /api/events/:id/participants` | Anyone | Sign up, or update an existing entry with the same name and email |
 | `PATCH /api/participants/:id` | Participant or organizer | Change an entry (blocked when sign-ups are closed, except for the organizer) |

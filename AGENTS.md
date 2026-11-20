@@ -17,6 +17,7 @@ Current scope is a **first draft**:
   as secure. Real auth is a planned follow-up.
 - **No database.** Data lives in `data/store.json` on the server. It is
   gitignored and created on first write.
+- **Interests poll and gift ideas** exist. See "Interests poll" under Conventions.
 - **Game play is not built yet.** No draw order, gift opening, or stealing.
 
 ## Stack
@@ -78,6 +79,18 @@ npm run seed     # adds a demo event with a few participants (run again = anothe
 - **Public event data** must go through `toPublicEvent` before it reaches the
   client. Never send `organizer.email` or other participants' emails to a
   page that anyone with the link can see.
+
+- **Interests poll.** Participants have `interests: string[]`, normalized with
+  `normalizeInterest` (trimmed, lowercased, up to 8, each up to 30 characters).
+  When the organizer sets `status: "closed"` in `PATCH /api/events/[eventId]`,
+  the route runs `buildGiftIdeas` and saves `giftIdeas` and `giftIdeasAt` on the
+  event; closing again regenerates them. `suggestGifts` and `tallyInterests` in
+  `src/lib/gift-suggestions.ts` are pure, and the catalog is
+  `src/lib/gift-catalog.ts`. Gifts link to an Amazon search, with no affiliate tag.
+- **Poll data is public** (`GET /api/events/[eventId]/poll`). Build it only with
+  `getPoll` in `src/lib/poll.ts`, which whitelists name and interests. Never
+  spread participant records into it, so emails cannot leak. Gift ideas are
+  hidden while sign-ups are open.
 
 ## Next.js notes (this version)
 
