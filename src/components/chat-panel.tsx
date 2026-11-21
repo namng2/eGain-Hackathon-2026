@@ -10,6 +10,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { callApi, callApiForm } from "@/lib/client-api";
 import { MAX_IMAGE_BYTES } from "@/lib/chat-image";
 import { errorText } from "@/lib/errors";
@@ -34,6 +35,20 @@ type ChatData = {
 };
 
 const POLL_MS = 3000;
+
+/**
+ * The chat reads the signed-in name from the browser, so it renders only in the
+ * browser. The server and the first browser render both show a loading line,
+ * which keeps hydration consistent.
+ */
+const ClientChatView = dynamic(() => Promise.resolve(ChatView), {
+  ssr: false,
+  loading: () => <p className="text-sm text-stone-500">Loading chat…</p>,
+});
+
+export function ChatPageBody({ eventId }: { eventId: string }) {
+  return <ClientChatView eventId={eventId} />;
+}
 
 /** The group chat page body: asks for name + email, then shows the chat. */
 export function ChatView({ eventId }: { eventId: string }) {
@@ -232,17 +247,15 @@ function ChatPanel({
   const myName = data.me.name.toLowerCase();
 
   return (
-    <div className="space-y-4">
-      <Card>
+    <div data-wide-page className="space-y-4">
+      <div>
+        {event ? (
+          <p className="text-sm font-medium text-emerald-800">{event.companyName}</p>
+        ) : null}
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            {event ? (
-              <p className="text-sm font-medium text-emerald-800">{event.companyName}</p>
-            ) : null}
-            <h1 className="text-2xl font-bold tracking-tight">
-              {event ? `${event.name} chat` : "Group chat"}
-            </h1>
-          </div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {event ? `${event.name} chat` : "Group chat"}
+          </h1>
           {event ? <StatusBadge status={event.status} /> : null}
         </div>
         {event ? (
@@ -261,12 +274,116 @@ function ChatPanel({
             Not you?
           </button>
         </p>
+      </div>
 
-        <div className="mt-4 border-t border-stone-200 pt-4">
+      {loadError ? (
+        <Alert tone="info">Having trouble reaching the chat. Trying again…</Alert>
+      ) : null}
+
+      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_16rem] md:items-start">
+        <Card className="!p-0 overflow-hidden">
+          <div
+            ref={listRef}
+            role="log"
+            aria-label="Chat messages"
+            onScroll={(e) => {
+              const el = e.currentTarget;
+              stickToBottom.current =
+                el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+            }}
+            className="h-[55vh] min-h-64 space-y-4 overflow-y-auto bg-stone-50 p-4"
+          >
+            <div className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-900 ring-1 ring-inset ring-emerald-200">
+              <p className="font-semibold">
+                Welcome to the {event ? event.name : "event"} chat 🎁
+              </p>
+              <p className="mt-1">
+                Say hi, share the kind of gift you&apos;re hoping to get, and plan your
+                steals. Keep it friendly, and keep the surprise: don&apos;t give away
+                what you&apos;re bringing!
+              </p>
+            </div>
+
+            {data.messages.length === 0 ? (
+              <EmptyNote>No messages yet. Be the first to say hello!</EmptyNote>
+            ) : (
+              data.messages.map((message) => {
+                const mine = message.authorName.toLowerCase() === myName;
+                return (
+                  <MessageBubble
+                    key={message.id}
+                    message={message}
+                    mine={mine}
+                    canDelete={mine || canModerate}
+                    onDelete={() => void remove(message)}
+                    onReact={(emoji) => void react(message, emoji)}
+                  />
+                );
+              })
+            )}
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-3 border-t border-stone-200 p-4">
+            {preview ? (
+              <div className="flex items-start gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element -- local preview of a file the user just picked */}
+                <img
+                  src={preview}
+                  alt="Image to send"
+                  className="h-20 w-20 rounded-lg object-cover ring-1 ring-stone-200"
+                />
+                <Button variant="secondary" onClick={() => setPicked(null)}>
+                  Remove image
+                </Button>
+              </div>
+            ) : null}
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              maxLength={MAX_CHAT_TEXT}
+              rows={2}
+              placeholder="Write a message…"
+              aria-label="Message"
+              className={`${inputClass} mt-0 resize-none`}
+            />
+            {sendError ? <Alert tone="error">{sendError}</Alert> : null}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  onChange={handlePick}
+                  className="sr-only"
+                  tabIndex={-1}
+                  aria-label="Choose an image"
+                />
+                <Button
+                  variant="secondary"
+                  disabled={sending}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  Add image
+                </Button>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="hidden text-xs text-stone-500 sm:inline">
+                  Enter to send, Shift+Enter for a new line
+                </span>
+                <Button type="submit" disabled={sending || (!text.trim() && !image)}>
+                  {sending ? "Sending…" : "Send"}
+                </Button>
+              </div>
+            </div>
+          </form>
+        </Card>
+
+        <Card>
           <h2 className="text-sm font-semibold text-stone-800">
             Who&apos;s here ({data.members.length})
           </h2>
-          <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-3">
+          <ul className="mt-3 space-y-3">
             {data.members.map((member) => (
               <li key={`${member.name}-${member.isOrganizer}`} className="flex items-center gap-2">
                 <Avatar name={member.name} url={member.avatarUrl} size="sm" />
@@ -281,110 +398,8 @@ function ChatPanel({
               </li>
             ))}
           </ul>
-        </div>
-      </Card>
-
-      {loadError ? (
-        <Alert tone="info">Having trouble reaching the chat. Trying again…</Alert>
-      ) : null}
-
-      <Card className="!p-0 overflow-hidden">
-        <div
-          ref={listRef}
-          role="log"
-          aria-label="Chat messages"
-          onScroll={(e) => {
-            const el = e.currentTarget;
-            stickToBottom.current =
-              el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-          }}
-          className="h-[55vh] min-h-64 space-y-4 overflow-y-auto bg-stone-50 p-4"
-        >
-          <div className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-900 ring-1 ring-inset ring-emerald-200">
-            <p className="font-semibold">
-              Welcome to the {event ? event.name : "event"} chat 🎁
-            </p>
-            <p className="mt-1">
-              Say hi, share the kind of gift you&apos;re hoping to get, and plan your
-              steals. Keep it friendly, and keep the surprise: don&apos;t give away
-              what you&apos;re bringing!
-            </p>
-          </div>
-
-          {data.messages.length === 0 ? (
-            <EmptyNote>No messages yet. Be the first to say hello!</EmptyNote>
-          ) : (
-            data.messages.map((message) => {
-              const mine = message.authorName.toLowerCase() === myName;
-              return (
-                <MessageBubble
-                  key={message.id}
-                  message={message}
-                  mine={mine}
-                  canDelete={mine || canModerate}
-                  onDelete={() => void remove(message)}
-                  onReact={(emoji) => void react(message, emoji)}
-                />
-              );
-            })
-          )}
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-3 border-t border-stone-200 p-4">
-          {preview ? (
-            <div className="flex items-start gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element -- local preview of a file the user just picked */}
-              <img
-                src={preview}
-                alt="Image to send"
-                className="h-20 w-20 rounded-lg object-cover ring-1 ring-stone-200"
-              />
-              <Button variant="secondary" onClick={() => setPicked(null)}>
-                Remove image
-              </Button>
-            </div>
-          ) : null}
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            maxLength={MAX_CHAT_TEXT}
-            rows={2}
-            placeholder="Write a message…"
-            aria-label="Message"
-            className={`${inputClass} mt-0 resize-none`}
-          />
-          {sendError ? <Alert tone="error">{sendError}</Alert> : null}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/jpeg,image/png,image/gif,image/webp"
-                onChange={handlePick}
-                className="sr-only"
-                tabIndex={-1}
-                aria-label="Choose an image"
-              />
-              <Button
-                variant="secondary"
-                disabled={sending}
-                onClick={() => fileRef.current?.click()}
-              >
-                Add image
-              </Button>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="hidden text-xs text-stone-500 sm:inline">
-                Enter to send, Shift+Enter for a new line
-              </span>
-              <Button type="submit" disabled={sending || (!text.trim() && !image)}>
-                {sending ? "Sending…" : "Send"}
-              </Button>
-            </div>
-          </div>
-        </form>
-      </Card>
+        </Card>
+      </div>
 
       <p className="text-sm text-stone-500">
         <Link href="/account" className="font-medium text-emerald-800 underline">
@@ -408,8 +423,6 @@ function MessageBubble({
   onDelete: () => void;
   onReact: (emoji: string) => void;
 }) {
-  const [picking, setPicking] = useState(false);
-
   return (
     <div className={`flex items-start gap-2 ${mine ? "flex-row-reverse" : ""}`}>
       <Avatar name={message.authorName} url={message.authorAvatarUrl} size="sm" />
@@ -423,12 +436,30 @@ function MessageBubble({
           · {formatDateTime(message.createdAt)}
         </p>
         <div
-          className={`rounded-2xl px-3 py-2 text-sm ${
+          className={`group relative rounded-2xl px-3 py-2 text-sm ${
             mine
               ? "bg-emerald-700 text-white"
               : "bg-white text-stone-900 ring-1 ring-inset ring-stone-200"
           }`}
         >
+          {/* Shows when the message is hovered (or focused by keyboard). */}
+          <span
+            className={`absolute -top-4 ${
+              mine ? "right-2" : "left-2"
+            } hidden gap-1 rounded-full bg-white px-1.5 py-0.5 shadow ring-1 ring-inset ring-stone-300 group-hover:flex group-focus-within:flex`}
+          >
+            {REACTION_EMOJIS.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                aria-label={`React with ${emoji}`}
+                onClick={() => onReact(emoji)}
+                className="rounded px-1 text-base hover:bg-stone-100"
+              >
+                {emoji}
+              </button>
+            ))}
+          </span>
           {message.text ? (
             <p className="whitespace-pre-wrap break-words">{message.text}</p>
           ) : null}
@@ -471,32 +502,6 @@ function MessageBubble({
               {emoji} {count}
             </button>
           ))}
-          {picking ? (
-            <span className="flex gap-1 rounded-full bg-white px-1.5 py-0.5 ring-1 ring-inset ring-stone-300">
-              {REACTION_EMOJIS.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  aria-label={`React with ${emoji}`}
-                  onClick={() => {
-                    setPicking(false);
-                    onReact(emoji);
-                  }}
-                  className="rounded px-1 text-base hover:bg-stone-100"
-                >
-                  {emoji}
-                </button>
-              ))}
-            </span>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setPicking(true)}
-              className="text-xs text-stone-500 underline underline-offset-2 hover:text-emerald-800"
-            >
-              React
-            </button>
-          )}
           {canDelete ? (
             <button
               type="button"

@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { ChatView } from "@/components/chat-panel";
+import { ChatPageBody } from "@/components/chat-panel";
 
 type Props = { params: Promise<{ eventId: string }> };
 
@@ -14,5 +14,5 @@ export default function ChatPage({ params }: Props) {
 
 async function ChatLoader({ params }: Props) {
   const { eventId } = await params;
-  return <ChatView eventId={eventId} />;
+  return <ChatPageBody eventId={eventId} />;
 }

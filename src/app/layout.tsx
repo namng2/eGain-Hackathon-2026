@@ -59,7 +59,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             aria-hidden="true"
           />
         </header>
-        <main className="mx-4 my-6 flex-1 rounded-2xl bg-white/90 px-4 py-8 shadow-lg backdrop-blur-sm sm:mx-auto sm:max-w-3xl sm:px-8 sm:py-10">
+        <main className="mx-4 my-6 flex-1 rounded-2xl bg-white/90 px-4 py-8 shadow-lg backdrop-blur-sm sm:mx-auto sm:max-w-3xl has-[[data-wide-page]]:sm:max-w-6xl sm:px-8 sm:py-10">
           {children}
         </main>
         <footer className="border-t-4 border-green-800 bg-green-900 text-green-50">
