@@ -20,7 +20,12 @@ export type GiftIdea = {
   searchQuery: string;
   /** Poll interests that led to this suggestion (empty for budget fallbacks) */
   matchedInterests: string[];
+  /** One sentence on why it fits this group. Written by the AI; absent for algorithm picks. */
+  why?: string;
 };
+
+/** Who wrote the gift ideas: Claude, or our built-in algorithm (also the fallback). */
+export type GiftIdeasSource = "ai" | "algorithm";
 
 export type InterestCount = { interest: string; count: number };
 
@@ -42,6 +47,7 @@ export type GiftEvent = {
   giftIdeas?: GiftIdea[];
   /** ISO time the gift ideas were generated. */
   giftIdeasAt?: string;
+  giftIdeasSource?: GiftIdeasSource;
 };
 
 export type Attendance = "in_person" | "remote";
@@ -69,6 +75,7 @@ export type PollData = {
   tally: InterestCount[];
   giftIdeas: GiftIdea[];
   giftIdeasAt?: string;
+  giftIdeasSource?: GiftIdeasSource;
 };
 
 /** Event fields that are safe to show to anyone holding the share link. */

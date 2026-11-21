@@ -43,7 +43,7 @@ export async function PATCH(request: Request, { params }: Context) {
     const participants = await listParticipants(eventId);
     Object.assign(
       changes,
-      buildGiftIdeas({ budget: changes.budget ?? event.budget }, participants),
+      await buildGiftIdeas({ budget: changes.budget ?? event.budget }, participants),
     );
   }
 

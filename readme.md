@@ -30,7 +30,7 @@ npm run seed       # adds "Holiday White Elephant 2026" with three sign-ups
 | `/` | Everyone | Home page |
 | `/create` | Organizer | Create an event |
 | `/join/<eventId>` | Anyone with the link | Event details and sign-up form |
-| `/events/<eventId>/manage` | Organizer | Share link, sign-up controls, event details, participant list, CSV export |
+| `/events/<eventId>/manage` | Organizer | Share link, sign-up controls, event details, participant list |
 | `/account` | Anyone | Events you organize and events you joined. Edit or leave your entry. |
 | `/events/<eventId>/chat` | Organizer and people signed up | Group chat for the event, with optional images |
 
@@ -39,6 +39,20 @@ npm run seed       # adds "Holiday White Elephant 2026" with three sign-ups
 When signing up, people **pick up to 8 interests and hobbies from a fixed list** (coffee, hiking, board games, and so on). They can change their picks and gift hint later from the account page, until the organizer closes sign-ups. Everyone with the share link sees the poll on the join page: the top interests, and each person's name with their interests. Emails are never shown.
 
 When the organizer **closes sign-ups**, the app turns the poll into up to 6 **gift ideas** within the event budget, picked from a built-in sample catalog (`src/lib/gift-catalog.ts`), scored by how many people picked the interests each gift is tagged with. To add an interest option, add it to `INTERESTS` there and tag at least one gift with it. Each idea has an emoji tile and a link to an Amazon search. There are no real product photos, prices, or affiliate tags. Reopening and closing again regenerates the ideas from the latest answers.
+
+### AI gift ideas (optional)
+
+If an Anthropic API key is set, **Claude writes the gift ideas** instead of the built-in matcher, with a one-sentence reason for each. The organizer can also click **Regenerate with AI** on the dashboard (once sign-ups are closed, with a 10-second cooldown).
+
+To turn it on, create an API key in the [Anthropic Console](https://console.anthropic.com/) and put it in a file named `.env.local` in the project folder (it is gitignored):
+
+```
+ANTHROPIC_API_KEY=your-key-here
+```
+
+Then restart `npm run dev`. Optionally set `GIFT_AI_MODEL` to use a different Claude model (the default is `claude-opus-5-5`).
+
+Only the group's interest counts and the budget are sent to Claude, never names, emails, or phone numbers. **Without a key, or if the call fails, times out, or returns something unusable, the app falls back to the built-in algorithm**, so gift ideas always appear. Each idea card says which one wrote it.
 
 ## Important: no login yet
 
@@ -82,6 +96,7 @@ See [AGENTS.md](AGENTS.md) for conventions and notes for contributors.
 | `GET /api/events/:id` | Anyone | Public event details |
 | `PATCH /api/events/:id` | Organizer | Edit details, open or close sign-ups. Closing also generates gift ideas. |
 | `GET /api/events/:id/poll` | Anyone | Names and interests, top interests, and gift ideas (no emails) |
+| `POST /api/events/:id/gift-ideas` | Organizer | Regenerate the gift ideas (Claude when available), after sign-ups close |
 | `POST /api/events/:id/roster` | Organizer | Full participant list (includes emails) |
 | `POST /api/events/:id/participants` | Anyone | Sign up, or update an existing entry with the same name and email |
 | `PATCH /api/participants/:id` | Participant or organizer | Change an entry (blocked when sign-ups are closed, except for the organizer) |

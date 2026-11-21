@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
-import { toCsv } from "@/lib/csv";
 import { callApi } from "@/lib/client-api";
 import { errorText } from "@/lib/errors";
 import {
@@ -62,6 +61,9 @@ function ManageView({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [busy, setBusy] = useState(false);
+  // Closing sign-ups now also writes the gift ideas, which can take a few seconds.
+  const [closing, setClosing] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
 
   const [version, setVersion] = useState(0);
   const reload = useCallback(() => setVersion((v) => v + 1), []);
@@ -94,6 +96,7 @@ function ManageView({
 
   async function saveChanges(changes: Record<string, unknown>, successText: string) {
     setBusy(true);
+    setClosing(changes.status === "closed");
     setNotice(null);
     try {
       await callApi(`/api/events/${eventId}`, {
@@ -106,6 +109,30 @@ function ManageView({
       setNotice({ tone: "error", text: errorText(err) });
     } finally {
       setBusy(false);
+      setClosing(false);
+    }
+  }
+
+  async function regenerateIdeas() {
+    setRegenerating(true);
+    setNotice(null);
+    try {
+      const result = await callApi<{ giftIdeasSource?: "ai" | "algorithm" }>(
+        `/api/events/${eventId}/gift-ideas`,
+        { body: { identity } },
+      );
+      reload();
+      setNotice({
+        tone: "success",
+        text:
+          result.giftIdeasSource === "ai"
+            ? "Claude wrote a fresh set of gift ideas."
+            : "Gift ideas refreshed.",
+      });
+    } catch (err) {
+      setNotice({ tone: "error", text: errorText(err) });
+    } finally {
+      setRegenerating(false);
     }
   }
 
@@ -127,36 +154,6 @@ function ManageView({
     } finally {
       setBusy(false);
     }
-  }
-
-  function exportCsv() {
-    if (!roster) return;
-    const rows = [
-      ["Name", "Email or phone", "Department", "Attendance", "Interests", "Gift hint", "Joined"],
-      ...roster.participants.map((p) => [
-        p.name,
-        p.email || p.phone,
-        p.department,
-        attendanceLabel(p.attendance),
-        p.interests.join(", "),
-        p.giftTeaser,
-        p.joinedAt,
-      ]),
-    ];
-    const blob = new Blob(["﻿" + toCsv(rows)], {
-      type: "text/csv;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    const slug =
-      roster.event.name
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "") || "event";
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${slug}-participants.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
   }
 
   if (loadError) {
@@ -203,7 +200,7 @@ function ManageView({
       </Card>
 
       {notice ? (
-        <Alert tone={notice.tone === "error" ? "error" : "success"}>{notice.text}</Alert>
+        <Alert tone={notice.tone}>{notice.text}</Alert>
       ) : null}
 
       <Card>
@@ -246,7 +243,11 @@ function ManageView({
                 )
               }
             >
-              {event.status === "open" ? "Close sign-ups" : "Reopen sign-ups"}
+              {closing
+                ? "Writing gift ideas…"
+                : event.status === "open"
+                  ? "Close sign-ups"
+                  : "Reopen sign-ups"}
             </Button>
             <Link
               href={`/events/${eventId}/chat`}
@@ -254,13 +255,6 @@ function ManageView({
             >
               Group chat
             </Link>
-            <Button
-              variant="secondary"
-              onClick={exportCsv}
-              disabled={participants.length === 0}
-            >
-              Export CSV
-            </Button>
           </div>
         </div>
       </Card>
@@ -268,6 +262,17 @@ function ManageView({
       {poll ? (
         <PollPanel
           poll={poll}
+          actions={
+            event.status === "closed" ? (
+              <Button
+                variant="secondary"
+                disabled={busy || regenerating}
+                onClick={() => void regenerateIdeas()}
+              >
+                {regenerating ? "Asking Claude…" : "✨ Regenerate with AI"}
+              </Button>
+            ) : undefined
+          }
           note={
             poll.giftIdeasAt
               ? `Generated when sign-ups closed on ${formatDateTime(poll.giftIdeasAt)}.`

@@ -118,6 +118,15 @@ npm run seed     # adds a demo event with a few participants (run again = anothe
   event; closing again regenerates them. `suggestGifts` and `tallyInterests` in
   `src/lib/gift-suggestions.ts` are pure, and the catalog is
   `src/lib/gift-catalog.ts`. Gifts link to an Amazon search, with no affiliate tag.
+- **AI gift ideas.** `src/lib/ai-gifts.ts` calls Claude (server only; reads
+  `ANTHROPIC_API_KEY` from the environment, in `.env.local`). `buildGiftIdeas` in
+  `src/lib/poll.ts` tries it first and falls back to `suggestGifts` on any
+  failure, so the list is never empty. Send Claude only interest counts and the
+  budget, never names, emails, or phone numbers. Treat its answer as untrusted:
+  always pass it through `sanitizeAiIdeas` (budget, lengths, duplicates, known
+  interests) and render it as text, never HTML. `POST /api/events/[eventId]/gift-ideas`
+  is organizer-only, needs sign-ups closed, and has a 10-second cooldown per event.
+  Never put the API key in client code or commit it.
 - **Poll data is public** (`GET /api/events/[eventId]/poll`). Build it only with
   `getPoll` in `src/lib/poll.ts`, which whitelists name and interests. Never
   spread participant records into it, so emails cannot leak. Gift ideas are
