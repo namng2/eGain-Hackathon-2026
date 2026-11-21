@@ -2,8 +2,13 @@ import { NextResponse } from "next/server";
 import { apiError, parseMessageForm } from "@/lib/api";
 import { loadChatAccess } from "@/lib/chat-access";
 import { MAX_IMAGE_BYTES, detectImageType } from "@/lib/chat-image";
-import { toPublicMessage } from "@/lib/public-chat";
-import { addMessage, deleteChatImage, saveChatImage } from "@/lib/store";
+import { buildAvatarMap, toPublicMessage } from "@/lib/public-chat";
+import {
+  addMessage,
+  deleteChatImage,
+  listParticipants,
+  saveChatImage,
+} from "@/lib/store";
 
 type Context = { params: Promise<{ eventId: string }> };
 
@@ -55,8 +60,14 @@ export async function POST(request: Request, { params }: Context) {
       text: data.text,
       image: stored,
     });
+    const avatars = buildAvatarMap(eventId, await listParticipants(eventId));
     return NextResponse.json(
-      { message: toPublicMessage(message) },
+      {
+        message: toPublicMessage(message, {
+          viewerEmail: access.member.email,
+          avatars,
+        }),
+      },
       { status: 201 },
     );
   } catch (err) {

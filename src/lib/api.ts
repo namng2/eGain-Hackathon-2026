@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { z } from "zod";
-import { firstIssue, sendMessageSchema } from "./validation";
+import { firstIssue, identityOnlySchema, sendMessageSchema } from "./validation";
 
 export function apiError(message: string, status: number) {
   return NextResponse.json({ error: message }, { status });
@@ -63,6 +63,34 @@ export async function parseMessageForm(request: Request): Promise<
   return {
     ok: true,
     data: result.data,
+    image: image instanceof File && image.size > 0 ? image : null,
+  };
+}
+
+/** Parses a profile picture upload: multipart form with name, email, and an image file. */
+export async function parseAvatarForm(request: Request): Promise<
+  | { ok: true; identity: z.output<typeof identityOnlySchema>["identity"]; image: File | null }
+  | { ok: false; response: NextResponse }
+> {
+  let form: FormData;
+  try {
+    form = await request.formData();
+  } catch {
+    return { ok: false, response: apiError("Request must be a form", 400) };
+  }
+  const result = identityOnlySchema.safeParse({
+    identity: {
+      name: formText(form.get("name")) ?? "",
+      email: formText(form.get("email")) ?? "",
+    },
+  });
+  if (!result.success) {
+    return { ok: false, response: apiError(firstIssue(result.error), 400) };
+  }
+  const image = form.get("image");
+  return {
+    ok: true,
+    identity: result.data.identity,
     image: image instanceof File && image.size > 0 ? image : null,
   };
 }

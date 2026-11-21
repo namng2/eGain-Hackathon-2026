@@ -13,19 +13,23 @@ import Link from "next/link";
 import { callApi, callApiForm } from "@/lib/client-api";
 import { MAX_IMAGE_BYTES } from "@/lib/chat-image";
 import { errorText } from "@/lib/errors";
-import { formatDateTime } from "@/lib/format";
+import { formatBudget, formatDateTime, formatEventDate } from "@/lib/format";
 import { MAX_CHAT_TEXT } from "@/lib/public-chat";
+import { REACTION_EMOJIS } from "@/lib/reactions";
 import type {
+  ChatMember,
   ChatRole,
   Identity,
   PublicChatMessage,
   PublicEvent,
 } from "@/lib/types";
+import { Avatar } from "./avatar";
 import { IdentityGate } from "./identity-gate";
-import { Alert, Button, Card, EmptyNote, inputClass } from "./ui";
+import { Alert, Button, Card, EmptyNote, StatusBadge, inputClass } from "./ui";
 
 type ChatData = {
   messages: PublicChatMessage[];
+  members: ChatMember[];
   me: { name: string; role: ChatRole };
 };
 
@@ -79,7 +83,7 @@ function ChatPanel({
         if (active) setEvent(found);
       },
       () => {
-        // The title is a nicety. The chat itself reports any real problem.
+        // The banner is a nicety. The chat itself reports any real problem.
       },
     );
     return () => {
@@ -197,6 +201,18 @@ function ChatPanel({
     }
   }
 
+  async function react(message: PublicChatMessage, emoji: string) {
+    try {
+      await callApi(
+        `/api/events/${eventId}/chat/messages/${message.id}/reactions`,
+        { body: { identity, emoji } },
+      );
+      refresh();
+    } catch (err) {
+      setSendError(errorText(err));
+    }
+  }
+
   if (!data) {
     if (loadError) {
       return (
@@ -216,16 +232,26 @@ function ChatPanel({
 
   return (
     <div className="space-y-4">
-      <div>
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            {event ? (
+              <p className="text-sm font-medium text-emerald-800">{event.companyName}</p>
+            ) : null}
+            <h1 className="text-2xl font-bold tracking-tight">
+              {event ? `${event.name} chat` : "Group chat"}
+            </h1>
+          </div>
+          {event ? <StatusBadge status={event.status} /> : null}
+        </div>
         {event ? (
-          <p className="text-sm font-medium text-emerald-800">{event.companyName}</p>
+          <p className="mt-2 text-sm text-stone-600">
+            {formatEventDate(event.date)} · {event.location} · Budget{" "}
+            {formatBudget(event.budget)}
+          </p>
         ) : null}
-        <h1 className="text-2xl font-bold tracking-tight">
-          {event ? `${event.name} chat` : "Group chat"}
-        </h1>
-        <p className="mt-1 text-sm text-stone-600">
-          Everyone signed up for this event, and the organizer, can read and post
-          here. Signed in as <strong className="text-stone-900">{data.me.name}</strong>.{" "}
+        <p className="mt-2 text-sm text-stone-600">
+          Signed in as <strong className="text-stone-900">{data.me.name}</strong>.{" "}
           <button
             type="button"
             onClick={onForget}
@@ -234,7 +260,28 @@ function ChatPanel({
             Not you?
           </button>
         </p>
-      </div>
+
+        <div className="mt-4 border-t border-stone-200 pt-4">
+          <h2 className="text-sm font-semibold text-stone-800">
+            Who&apos;s here ({data.members.length})
+          </h2>
+          <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-3">
+            {data.members.map((member) => (
+              <li key={`${member.name}-${member.isOrganizer}`} className="flex items-center gap-2">
+                <Avatar name={member.name} url={member.avatarUrl} size="sm" />
+                <span className="text-sm text-stone-800">
+                  {member.name}
+                  {member.isOrganizer ? (
+                    <span className="ml-1.5 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                      Organizer
+                    </span>
+                  ) : null}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </Card>
 
       {loadError ? (
         <Alert tone="info">Having trouble reaching the chat. Trying again…</Alert>
@@ -250,10 +297,21 @@ function ChatPanel({
             stickToBottom.current =
               el.scrollHeight - el.scrollTop - el.clientHeight < 80;
           }}
-          className="h-[55vh] min-h-64 space-y-3 overflow-y-auto bg-stone-50 p-4"
+          className="h-[55vh] min-h-64 space-y-4 overflow-y-auto bg-stone-50 p-4"
         >
+          <div className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-900 ring-1 ring-inset ring-emerald-200">
+            <p className="font-semibold">
+              Welcome to the {event ? event.name : "event"} chat 🎁
+            </p>
+            <p className="mt-1">
+              Say hi, share the kind of gift you&apos;re hoping to get, and plan your
+              steals. Keep it friendly, and keep the surprise: don&apos;t give away
+              what you&apos;re bringing!
+            </p>
+          </div>
+
           {data.messages.length === 0 ? (
-            <EmptyNote>No messages yet. Say hello!</EmptyNote>
+            <EmptyNote>No messages yet. Be the first to say hello!</EmptyNote>
           ) : (
             data.messages.map((message) => {
               const mine = message.authorName.toLowerCase() === myName;
@@ -264,6 +322,7 @@ function ChatPanel({
                   mine={mine}
                   canDelete={mine || canModerate}
                   onDelete={() => void remove(message)}
+                  onReact={(emoji) => void react(message, emoji)}
                 />
               );
             })
@@ -340,15 +399,20 @@ function MessageBubble({
   mine,
   canDelete,
   onDelete,
+  onReact,
 }: {
   message: PublicChatMessage;
   mine: boolean;
   canDelete: boolean;
   onDelete: () => void;
+  onReact: (emoji: string) => void;
 }) {
+  const [picking, setPicking] = useState(false);
+
   return (
-    <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-      <div className="max-w-[85%] sm:max-w-[70%]">
+    <div className={`flex items-start gap-2 ${mine ? "flex-row-reverse" : ""}`}>
+      <Avatar name={message.authorName} url={message.authorAvatarUrl} size="sm" />
+      <div className="max-w-[80%] sm:max-w-[70%]">
         <p
           className={`mb-0.5 text-xs text-stone-500 ${mine ? "text-right" : ""}`}
         >
@@ -384,17 +448,64 @@ function MessageBubble({
             </a>
           ) : null}
         </div>
-        {canDelete ? (
-          <button
-            type="button"
-            onClick={onDelete}
-            className={`mt-0.5 text-xs text-stone-500 underline underline-offset-2 hover:text-red-700 ${
-              mine ? "float-right" : ""
-            }`}
-          >
-            Delete
-          </button>
-        ) : null}
+
+        <div
+          className={`mt-1 flex flex-wrap items-center gap-1.5 ${
+            mine ? "justify-end" : ""
+          }`}
+        >
+          {message.reactions.map(({ emoji, count, mine: reacted }) => (
+            <button
+              key={emoji}
+              type="button"
+              aria-pressed={reacted}
+              aria-label={`${emoji} ${count}${reacted ? ", you reacted" : ""}`}
+              onClick={() => onReact(emoji)}
+              className={`rounded-full px-2 py-0.5 text-xs ring-1 ring-inset transition-colors ${
+                reacted
+                  ? "bg-emerald-50 text-emerald-900 ring-emerald-400"
+                  : "bg-white text-stone-700 ring-stone-300 hover:bg-stone-50"
+              }`}
+            >
+              {emoji} {count}
+            </button>
+          ))}
+          {picking ? (
+            <span className="flex gap-1 rounded-full bg-white px-1.5 py-0.5 ring-1 ring-inset ring-stone-300">
+              {REACTION_EMOJIS.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  aria-label={`React with ${emoji}`}
+                  onClick={() => {
+                    setPicking(false);
+                    onReact(emoji);
+                  }}
+                  className="rounded px-1 text-base hover:bg-stone-100"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setPicking(true)}
+              className="text-xs text-stone-500 underline underline-offset-2 hover:text-emerald-800"
+            >
+              React
+            </button>
+          )}
+          {canDelete ? (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="text-xs text-stone-500 underline underline-offset-2 hover:text-red-700"
+            >
+              Delete
+            </button>
+          ) : null}
+        </div>
       </div>
     </div>
   );

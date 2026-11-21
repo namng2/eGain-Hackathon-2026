@@ -133,6 +133,20 @@ npm run seed     # adds a demo event with a few participants (run again = anothe
   Image ids are checked with `isImageId` before they touch the file system. The
   image URL is served without a name + email check (an `<img>` tag can't send
   one), so the unguessable id is the key.
+- **Profile pictures.** `Participant.avatar` points at a file in
+  `data/uploads/` (the same helpers as chat images). The browser crops and
+  shrinks the photo (`src/lib/resize-image.ts`); the server still checks the real
+  type and a 1 MB cap. Avatar URLs are looked up by author email when the chat is
+  read (`buildAvatarMap` in `src/lib/public-chat.ts`), never stored on messages.
+  They are served by `GET /api/events/[eventId]/avatars/[avatarId]` only for a
+  picture that belongs to a participant of that event. They are not shown on the
+  public join page. Delete the file when a participant leaves or is removed.
+- **Reactions.** `ChatMessage.reactions` maps an emoji (one of `REACTION_EMOJIS`
+  in `src/lib/reactions.ts`) to reactors' emails. Emails stay server-side:
+  clients only get counts and `mine` from `summarizeReactions`.
+- **Participant access.** Routes that act on one participant's entry use
+  `loadParticipantAccess` in `src/lib/participant-access.ts` (the person or the
+  organizer).
 
 ## Next.js notes (this version)
 

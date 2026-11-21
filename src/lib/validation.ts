@@ -2,6 +2,7 @@ import { z } from "zod";
 import { INTERESTS } from "./gift-catalog";
 import { normalizeEmail, normalizeName } from "./identity-match";
 import { MAX_CHAT_TEXT } from "./public-chat";
+import { REACTION_EMOJIS } from "./reactions";
 
 const name = z
   .string()
@@ -89,6 +90,11 @@ export const updateParticipantSchema = z.object({
 });
 
 export const identityOnlySchema = z.object({ identity: identitySchema });
+
+export const reactionSchema = z.object({
+  identity: identitySchema,
+  emoji: z.enum(REACTION_EMOJIS, { error: "Choose one of the available reactions" }),
+});
 
 // A message needs text or an image. The route checks the image side.
 export const sendMessageSchema = z.object({

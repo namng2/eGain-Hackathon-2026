@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { attendanceLabel } from "@/lib/format";
-import { callApi } from "@/lib/client-api";
+import { callApi, callApiForm } from "@/lib/client-api";
 import { errorText } from "@/lib/errors";
 import { useIdentity } from "@/lib/use-identity";
 import type { Attendance, Identity, Participant, PublicEvent } from "@/lib/types";
+import { AvatarPicker } from "./avatar-picker";
 import { InterestPicker } from "./interest-picker";
 import { Alert, Button, Card, Field, buttonClasses, inputClass } from "./ui";
 
@@ -48,6 +49,8 @@ function SignUpForm({
   const [attendance, setAttendance] = useState<Attendance>("in_person");
   const [giftTeaser, setGiftTeaser] = useState("");
   const [interests, setInterests] = useState<string[]>([]);
+  const [avatar, setAvatar] = useState<File | null>(null);
+  const [avatarProblem, setAvatarProblem] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<boolean | null>(null);
@@ -71,6 +74,19 @@ function SignUpForm({
           },
         },
       );
+      // The picture goes up as its own request, after the sign-up is saved.
+      setAvatarProblem(null);
+      if (avatar) {
+        try {
+          const form = new FormData();
+          form.set("name", name);
+          form.set("email", email);
+          form.set("image", avatar);
+          await callApiForm(`/api/participants/${data.participant.id}/avatar`, form);
+        } catch (err) {
+          setAvatarProblem(errorText(err));
+        }
+      }
       onSaved({ name: name.trim(), email: email.trim() });
       setCreated(data.created);
       // Re-run the server parts of this page so the sign-up count is current.
@@ -95,6 +111,14 @@ function SignUpForm({
               : "You were already signed up, so we updated your details."}
           </p>
         </Alert>
+        {avatarProblem ? (
+          <div className="mt-3">
+            <Alert tone="info">
+              Your profile picture couldn&apos;t be saved: {avatarProblem} You can add
+              it from My account.
+            </Alert>
+          </div>
+        ) : null}
         <div className="mt-4 flex flex-wrap gap-3">
           <Link href={`/events/${eventId}/chat`} className={buttonClasses("primary")}>
             Open the group chat
@@ -154,6 +178,19 @@ function SignUpForm({
               className={inputClass}
             />
           </Field>
+        </div>
+
+        <div>
+          <p className="text-sm font-medium text-stone-800">Profile picture (optional)</p>
+          <p className="mb-2 mt-1 text-xs text-stone-500">
+            Shown next to your messages in the group chat. You can change or remove it
+            later from My account.
+          </p>
+          <AvatarPicker
+            name={name}
+            onPick={(file) => setAvatar(file)}
+            onClear={() => setAvatar(null)}
+          />
         </div>
 
         <fieldset className="space-y-2">

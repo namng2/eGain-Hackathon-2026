@@ -11,6 +11,7 @@ import { customAlphabet, nanoid } from "nanoid";
 import { imageTypeForExt, isImageId } from "./chat-image";
 import { isInterest } from "./gift-catalog";
 import { normalizeEmail } from "./identity-match";
+import { toggleReactionIn } from "./reactions";
 import type { ChatMessage, GiftEvent, Participant } from "./types";
 
 type StoreData = {
@@ -328,4 +329,32 @@ export async function deleteChatImage(id: string, ext: string): Promise<void> {
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
   }
+}
+
+/** Sets or clears a participant's profile picture, returning the updated entry. */
+export function setParticipantAvatar(
+  participantId: string,
+  avatar: Participant["avatar"],
+): Promise<Participant | undefined> {
+  return mutate((data) => {
+    const participant = data.participants.find((p) => p.id === participantId);
+    if (!participant) return undefined;
+    if (avatar) participant.avatar = avatar;
+    else delete participant.avatar;
+    return participant;
+  });
+}
+
+/** Adds or removes one person's emoji reaction on a message. */
+export function toggleReaction(
+  messageId: string,
+  emoji: string,
+  email: string,
+): Promise<ChatMessage | undefined> {
+  return mutate((data) => {
+    const message = data.messages.find((m) => m.id === messageId);
+    if (!message) return undefined;
+    message.reactions = toggleReactionIn(message.reactions, emoji, email);
+    return message;
+  });
 }

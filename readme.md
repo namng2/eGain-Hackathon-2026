@@ -49,11 +49,15 @@ Anyone who knows someone's name and email can act as them. Do not use this for a
 
 Each event has a group chat at `/events/<eventId>/chat`, linked from the organizer dashboard, the account page, and the sign-up confirmation. The organizer and everyone signed up can read and post. Messages can include text (up to 1000 characters), one image (JPEG, PNG, GIF, or WebP, up to 5 MB), or both. The chat refreshes itself about every 3 seconds. You can delete your own messages, and the organizer can delete any message. The chat stays open after sign-ups close.
 
+The chat page shows an event banner, a "Who's here" row, and a short welcome note. Tap **React** under any message to add 👍 😂 🎁 🔥 or ❤️ (tap again to take it back).
+
+**Profile pictures.** People can add an optional profile picture when they sign up, and add, change, or remove it any time from the account page (even after sign-ups close). It is cropped to a small square in the browser first. It shows next to their messages and in "Who's here", never on the public join page. Without one, the chat shows a colored circle with their initials.
+
 Access is checked by name and email like the rest of the app, so it is only as private as that is: anyone who knows a participant's name and email can read the chat.
 
 ## Where data is stored
 
-Everything is in one JSON file: `data/store.json`, created on first write. Chat images are saved as files in `data/uploads/`. The whole `data/` folder is gitignored.
+Everything is in one JSON file: `data/store.json`, created on first write. Chat images and profile pictures are saved as files in `data/uploads/`. The whole `data/` folder is gitignored.
 Delete the folder to start over.
 
 All reads and writes go through `src/lib/store.ts`. Replacing that file with a database later should not require changes to pages or API routes.
@@ -87,6 +91,10 @@ See [AGENTS.md](AGENTS.md) for conventions and notes for contributors.
 | `POST /api/events/:id/chat/messages` | Organizer or participant | Post a message (multipart form: name, email, text, optional image) |
 | `DELETE /api/events/:id/chat/messages/:messageId` | Author or organizer | Delete a message and its image |
 | `GET /api/events/:id/chat/images/:imageId` | Anyone with the image link | Serve a chat image |
+| `POST /api/events/:id/chat/messages/:messageId/reactions` | Organizer or participant | Add or remove your emoji reaction |
+| `POST /api/participants/:id/avatar` | Participant or organizer | Set or replace a profile picture (multipart form: name, email, image, max 1 MB) |
+| `DELETE /api/participants/:id/avatar` | Participant or organizer | Remove a profile picture |
+| `GET /api/events/:id/avatars/:avatarId` | Anyone with the picture link | Serve a profile picture |
 
 Errors are returned as `{ "error": "..." }` with status 400, 403, 404, or 409.
 

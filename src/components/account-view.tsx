@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { callApi } from "@/lib/client-api";
+import { avatarUrl } from "@/lib/avatar";
+import { callApi, callApiForm } from "@/lib/client-api";
 import { errorText } from "@/lib/errors";
 import { attendanceLabel, formatEventDate } from "@/lib/format";
 import type { AccountSummary, Identity, Participant, PublicEvent } from "@/lib/types";
+import { AvatarPicker } from "./avatar-picker";
 import { IdentityGate } from "./identity-gate";
 import { InterestPicker } from "./interest-picker";
 import {
@@ -260,6 +262,34 @@ function JoinedCard({
           Interests: {participant.interests.join(", ")}
         </p>
       ) : null}
+
+      <div className="mt-4 border-t border-stone-200 pt-4">
+        <p className="mb-2 text-sm font-medium text-stone-800">
+          Profile picture{" "}
+          <span className="font-normal text-stone-500">(shown in the group chat)</span>
+        </p>
+        <AvatarPicker
+          name={participant.name}
+          currentUrl={
+            participant.avatar ? avatarUrl(event.id, participant.avatar.id) : undefined
+          }
+          onPick={async (file) => {
+            const form = new FormData();
+            form.set("name", identity.name);
+            form.set("email", identity.email);
+            form.set("image", file);
+            await callApiForm(`/api/participants/${participant.id}/avatar`, form);
+            onChanged();
+          }}
+          onClear={async () => {
+            await callApi(`/api/participants/${participant.id}/avatar`, {
+              method: "DELETE",
+              body: { identity },
+            });
+            onChanged();
+          }}
+        />
+      </div>
 
       {error ? (
         <div className="mt-3">

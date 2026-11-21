@@ -6,7 +6,7 @@ import {
   imageTypeForExt,
   isImageId,
 } from "./chat-image";
-import { MAX_CHAT_TEXT, chatImageUrl, toPublicMessage } from "./public-chat";
+import { MAX_CHAT_TEXT, buildAvatarMap, chatImageUrl, toChatMembers, toPublicMessage } from "./public-chat";
 import type { ChatMessage } from "./types";
 import { sendMessageSchema } from "./validation";
 
@@ -71,25 +71,33 @@ describe("toPublicMessage", () => {
     createdAt: "2026-11-20T23:00:00.000Z",
   };
 
-  it("never includes the author's email", () => {
-    const view = toPublicMessage(stored);
-    assert.equal(JSON.stringify(view).includes("ann@example.com"), false);
+  const ctx = { viewerEmail: "bob@example.com", avatars: new Map<string, string>() };
+
+  it("never includes the author's or a reactor's email", () => {
+    const view = toPublicMessage(
+      { ...stored, reactions: { "🔥": ["ann@example.com", "bob@example.com"] } },
+      ctx,
+    );
+    assert.equal(JSON.stringify(view).includes("@"), false);
     assert.equal("authorEmail" in view, false);
     assert.deepEqual(Object.keys(view).sort(), [
+      "authorAvatarUrl",
       "authorName",
       "createdAt",
       "id",
       "imageUrl",
+      "reactions",
       "text",
     ]);
+    assert.deepEqual(view.reactions, [{ emoji: "🔥", count: 2, mine: true }]);
   });
 
   it("builds the image URL, and omits it for text-only messages", () => {
     assert.equal(
-      toPublicMessage(stored).imageUrl,
+      toPublicMessage(stored, ctx).imageUrl,
       chatImageUrl("evt1", "V1StGXR8_Z5jdHi6B-myT"),
     );
-    assert.equal(toPublicMessage({ ...stored, image: undefined }).imageUrl, undefined);
+    assert.equal(toPublicMessage({ ...stored, image: undefined }, ctx).imageUrl, undefined);
   });
 });
 
@@ -124,5 +132,45 @@ describe("sendMessageSchema", () => {
       sendMessageSchema.safeParse({ identity: { name: "A", email: "nope" } }).success,
       false,
     );
+  });
+});
+
+describe("avatars in the chat", () => {
+  const people = [
+    { name: "Ann Lee", email: "Ann@Example.com", avatar: { id: "A".repeat(21), ext: "jpg" } },
+    { name: "Bob Ray", email: "bob@example.com" },
+  ];
+
+  it("looks avatars up by email, ignoring case", () => {
+    const avatars = buildAvatarMap("evt1", people);
+    assert.equal(avatars.size, 1);
+    const message: ChatMessage = {
+      id: "m1",
+      eventId: "evt1",
+      authorName: "Ann Lee",
+      authorEmail: "ann@example.com",
+      text: "hi",
+      createdAt: "2026-11-20T23:00:00.000Z",
+    };
+    const view = toPublicMessage(message, { viewerEmail: "x@y.co", avatars });
+    assert.equal(view.authorAvatarUrl, `/api/events/evt1/avatars/${"A".repeat(21)}`);
+    assert.equal(
+      toPublicMessage({ ...message, authorEmail: "bob@example.com" }, { viewerEmail: "x@y.co", avatars }).authorAvatarUrl,
+      undefined,
+    );
+  });
+
+  it("lists the organizer first, once, and never exposes emails", () => {
+    const avatars = buildAvatarMap("evt1", people);
+    const members = toChatMembers(
+      { name: "Olivia Org", email: "olivia@example.com" },
+      [...people, { name: "Olivia Org", email: "OLIVIA@example.com" }],
+      avatars,
+    );
+    assert.deepEqual(
+      members.map((m) => [m.name, m.isOrganizer]),
+      [["Olivia Org", true], ["Ann Lee", false], ["Bob Ray", false]],
+    );
+    assert.equal(JSON.stringify(members).includes("@"), false);
   });
 });

@@ -53,6 +53,8 @@ export type Participant = {
   giftTeaser?: string;
   /** Normalized interests and hobbies. Empty when none were given. */
   interests: string[];
+  /** Profile picture, saved as a file in data/uploads. Shown in the group chat. */
+  avatar?: { id: string; ext: string };
   joinedAt: string;
 };
 
@@ -90,6 +92,8 @@ export type ChatMessage = {
   authorEmail: string;
   text?: string;
   image?: { id: string; ext: string };
+  /** Emoji to the (normalized) emails of people who reacted. Server-only. */
+  reactions?: Record<string, string[]>;
   createdAt: string;
 };
 
@@ -99,7 +103,17 @@ export type PublicChatMessage = {
   authorName: string;
   text?: string;
   imageUrl?: string;
+  authorAvatarUrl?: string;
+  /** Only emojis with at least one reaction. `mine` is true for the viewer's own. */
+  reactions: { emoji: string; count: number; mine: boolean }[];
   createdAt: string;
+};
+
+/** Someone in the chat, for the "who's here" row. No email. */
+export type ChatMember = {
+  name: string;
+  avatarUrl?: string;
+  isOrganizer: boolean;
 };
 
 export type ChatRole = "organizer" | "participant";

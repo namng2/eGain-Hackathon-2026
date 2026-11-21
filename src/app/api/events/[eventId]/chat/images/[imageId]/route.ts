@@ -1,5 +1,6 @@
 import { apiError } from "@/lib/api";
 import { imageTypeForExt, isImageId } from "@/lib/chat-image";
+import { imageResponse } from "@/lib/image-response";
 import { findMessageByImage, readChatImage } from "@/lib/store";
 
 type Context = { params: Promise<{ eventId: string; imageId: string }> };
@@ -19,15 +20,5 @@ export async function GET(_request: Request, { params }: Context) {
 
   const bytes = await readChatImage(imageId, message.image.ext);
   if (!bytes) return apiError("Image not found", 404);
-
-  return new Response(Buffer.from(bytes), {
-    headers: {
-      "Content-Type": type.mime,
-      "Content-Length": String(bytes.byteLength),
-      // The type comes from our own allowlist; stop browsers from guessing.
-      "X-Content-Type-Options": "nosniff",
-      "Content-Security-Policy": "default-src 'none'; sandbox",
-      "Cache-Control": "private, max-age=300",
-    },
-  });
+  return imageResponse(bytes, type.mime);
 }
