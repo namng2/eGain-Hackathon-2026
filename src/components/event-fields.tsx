@@ -43,13 +43,13 @@ export function EventFields({ defaults = {} }: { defaults?: EventFormDefaults })
           className={inputClass}
         />
       </Field>
-      <Field label="Location or Link">
+      <Field label="Location">
         <input
           name="location"
           required
           maxLength={300}
           defaultValue={defaults.location}
-          placeholder="Break room 2, or a Zoom link"
+          placeholder="Borregas or Moffett"
           className={inputClass}
         />
       </Field>

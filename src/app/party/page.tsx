@@ -12,8 +12,7 @@ export default function NewPartyPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Start a gift party</h1>
         <p className="mt-1 text-sm text-stone-600">
-          Add the players, then the round writes a gift for each person from their
-          interests and runs the unwrap-and-steal game.
+          Add each player and the gift they&apos;re bringing, then unwrap and steal.
         </p>
       </div>
       <Card>
