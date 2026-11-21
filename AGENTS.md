@@ -91,9 +91,12 @@ npm run seed     # adds a demo event with a few participants (run again = anothe
 - **Errors** are returned as `{ "error": "message" }` with status 400 (bad
   input), 403 (not allowed), 404 (not found), or 409 (conflict, e.g. sign-ups
   closed or email already used under a different name).
-- **Emails are trimmed and lowercased** before storage. Names are trimmed and
-  whitespace-collapsed. A name + email "matches" when both are equal,
-  ignoring case.
+- **Emails are trimmed and lowercased** before storage. Phone numbers keep
+ only digits (and a leading `+`). Names are trimmed and whitespace-collapsed.
+ Participants identify with a name + email, or a name + phone. A name +
+ contact "matches" when the name is equal (ignoring case) and the email, or
+ else the phone, is equal. Use `contactKey` and `identitiesMatch` from
+ `src/lib/identity-match.ts`. Organizers must have an email.
 - **Organizer-only actions** check the request's identity against
   `event.organizer` with `identitiesMatch`. Participant actions check against
   the participant record. Organizers may also edit or remove any participant.
@@ -124,9 +127,9 @@ npm run seed     # adds a demo event with a few participants (run again = anothe
   files in `data/uploads/` (next to the data file), both written only through
   `src/lib/store.ts`. Only the organizer and signed-up participants may read or
   post: every chat route calls `loadChatAccess` in `src/lib/chat-access.ts`
-  (name + email, not real auth). Reading is `POST` so emails stay out of URLs.
+  (name + email or phone, not real auth). Reading is `POST` so contact details stay out of URLs.
   Sending is multipart form data parsed by `parseMessageForm`. Always send
-  messages to a client through `toPublicMessage`, never `authorEmail`.
+  messages to a client through `toPublicMessage`, never `authorEmail` or `authorPhone`.
 - **Chat images.** The type is detected from the file's first bytes with
   `detectImageType` (`src/lib/chat-image.ts`), never from the name or the
   browser's type. Only JPEG, PNG, GIF, and WebP up to 5 MB are saved, never SVG.
@@ -136,13 +139,15 @@ npm run seed     # adds a demo event with a few participants (run again = anothe
 - **Profile pictures.** `Participant.avatar` points at a file in
   `data/uploads/` (the same helpers as chat images). The browser crops and
   shrinks the photo (`src/lib/resize-image.ts`); the server still checks the real
-  type and a 1 MB cap. Avatar URLs are looked up by author email when the chat is
+  type and a 1 MB cap. Avatar URLs are looked up by the author's `contactKey` when the chat is
   read (`buildAvatarMap` in `src/lib/public-chat.ts`), never stored on messages.
   They are served by `GET /api/events/[eventId]/avatars/[avatarId]` only for a
   picture that belongs to a participant of that event. They are not shown on the
   public join page. Delete the file when a participant leaves or is removed.
 - **Reactions.** `ChatMessage.reactions` maps an emoji (one of `REACTION_EMOJIS`
-  in `src/lib/reactions.ts`) to reactors' emails. Emails stay server-side:
+  in `src/lib/reactions.ts`) to reactors' `contactKey`s (email, or else phone,
+  from `src/lib/identity-match.ts`). Never key people by email alone, since
+  phone-only people have an empty email. Contact details stay server-side:
   clients only get counts and `mine` from `summarizeReactions`.
 - **Participant access.** Routes that act on one participant's entry use
   `loadParticipantAccess` in `src/lib/participant-access.ts` (the person or the

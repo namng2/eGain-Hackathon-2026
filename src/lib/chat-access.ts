@@ -5,10 +5,10 @@ import type { ChatRole, Identity } from "./types";
 
 /**
  * Who may use an event's chat: the organizer and everyone signed up, matched
- * by name + email like the rest of the app. This is not real authentication.
+ * by name + email or phone like the rest of the app. This is not real authentication.
  *
- * On success, `member` carries the stored name and email, so messages show
- * the name as the person signed up with it, not however they typed it today.
+ * On success, `member` carries the stored name, email and phone, so messages
+ * show the name as the person signed up with it, not however they typed it today.
  */
 export async function loadChatAccess(eventId: string, identity: Identity) {
   const event = await getEvent(eventId);
@@ -28,7 +28,11 @@ export async function loadChatAccess(eventId: string, identity: Identity) {
     return {
       event,
       role: "participant" as ChatRole,
-      member: { name: participant.name, email: participant.email },
+      member: {
+        name: participant.name,
+        email: participant.email,
+        phone: participant.phone ?? "",
+      },
     } as const;
   }
 

@@ -1,6 +1,13 @@
+import { Caveat } from "next/font/google";
 import Link from "next/link";
 import { Card, buttonClasses } from "@/components/ui";
 import { site } from "@/lib/site";
+
+const headlineFont = Caveat({
+  weight: ["700"],
+  subsets: ["latin"],
+  display: "swap",
+});
 
 const steps = [
   {
@@ -13,7 +20,7 @@ const steps = [
   },
   {
     title: "Everyone signs up",
-    body: "People add their name, email, and gift hint, and can update their entry later.",
+    body: "People join with the link, then add their name, email or phone, interests, and gift hint. They can update their entry later.",
   },
 ];
 
@@ -21,16 +28,21 @@ export default function HomePage() {
   return (
     <div className="space-y-12">
       <section className="space-y-5">
-        <p className="text-sm font-semibold uppercase tracking-wider text-emerald-800">
+        <p className="text-sm font-semibold uppercase tracking-wider text-green-800">
           Office gift swap
         </p>
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          Run your white elephant from one link.
+        <h1
+          className={`${headlineFont.className} whitespace-nowrap text-center text-[clamp(1.125rem,5vw,2.75rem)] font-bold leading-tight`}
+        >
+          White elephant with your coworkers!
         </h1>
         <p className="max-w-xl text-stone-600">{site.tagline}</p>
         <div className="flex flex-col gap-3 sm:flex-row">
           <Link href="/create" className={buttonClasses("primary")}>
             Create an event
+          </Link>
+          <Link href="/join" className={buttonClasses("primary")}>
+            Join an event
           </Link>
           <Link href="/account" className={buttonClasses("secondary")}>
             Manage my account
@@ -44,7 +56,7 @@ export default function HomePage() {
           {steps.map((step, index) => (
             <li key={step.title}>
               <Card className="h-full">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-800">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-green-100 text-sm font-semibold text-green-800">
                   {index + 1}
                 </span>
                 <h3 className="mt-3 font-semibold">{step.title}</h3>

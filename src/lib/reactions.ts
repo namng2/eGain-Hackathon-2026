@@ -7,22 +7,22 @@ export const REACTION_EMOJIS = ["👍", "😂", "🎁", "🔥", "❤️"] as con
 
 export type ReactionEmoji = (typeof REACTION_EMOJIS)[number];
 
-/** Emoji to the normalized emails of the people who used it. */
+/** Emoji to the contact keys (see contactKey) of the people who used it. */
 export type Reactions = Record<string, string[]>;
 
 export function isReactionEmoji(value: string): value is ReactionEmoji {
   return (REACTION_EMOJIS as readonly string[]).includes(value);
 }
 
-const clean = (email: string) => email.trim().toLowerCase();
+const clean = (key: string) => key.trim().toLowerCase();
 
 /** Returns a new reactions object with this person's reaction toggled. */
 export function toggleReactionIn(
   reactions: Reactions | undefined,
   emoji: string,
-  email: string,
+  personKey: string,
 ): Reactions {
-  const who = clean(email);
+  const who = clean(personKey);
   const next: Reactions = { ...(reactions ?? {}) };
   const current = next[emoji] ?? [];
   const updated = current.includes(who)
@@ -33,12 +33,12 @@ export function toggleReactionIn(
   return next;
 }
 
-/** Counts per emoji in a fixed order, and whether the viewer reacted. No emails. */
+/** Counts per emoji in a fixed order, and whether the viewer reacted. No contact details. */
 export function summarizeReactions(
   reactions: Reactions | undefined,
-  viewerEmail: string,
+  viewerKey: string,
 ): { emoji: string; count: number; mine: boolean }[] {
-  const viewer = clean(viewerEmail);
+  const viewer = clean(viewerKey);
   return REACTION_EMOJIS.flatMap((emoji) => {
     const who = reactions?.[emoji] ?? [];
     return who.length > 0

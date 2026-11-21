@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { apiError, parseMessageForm } from "@/lib/api";
 import { loadChatAccess } from "@/lib/chat-access";
+import { contactKey } from "@/lib/identity-match";
 import { MAX_IMAGE_BYTES, detectImageType } from "@/lib/chat-image";
 import { buildAvatarMap, toPublicMessage } from "@/lib/public-chat";
 import {
@@ -16,7 +17,7 @@ type Context = { params: Promise<{ eventId: string }> };
 const MAX_BODY_BYTES = MAX_IMAGE_BYTES + 64 * 1024;
 
 /**
- * Post a message. Sent as multipart form data: name, email, text, and an
+ * Post a message. Sent as multipart form data: name, email or phone, text, and an
  * optional image. A message needs text, an image, or both.
  */
 export async function POST(request: Request, { params }: Context) {
@@ -57,6 +58,7 @@ export async function POST(request: Request, { params }: Context) {
       eventId,
       authorName: access.member.name,
       authorEmail: access.member.email,
+      authorPhone: access.member.phone,
       text: data.text,
       image: stored,
     });
@@ -64,7 +66,7 @@ export async function POST(request: Request, { params }: Context) {
     return NextResponse.json(
       {
         message: toPublicMessage(message, {
-          viewerEmail: access.member.email,
+          viewerKey: contactKey(access.member),
           avatars,
         }),
       },

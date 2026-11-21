@@ -6,7 +6,7 @@ export function EventSummary({ event }: { event: PublicEvent }) {
   const count = event.participantCount;
   return (
     <Card>
-      <p className="text-sm font-medium text-emerald-800">{event.companyName}</p>
+      <p className="text-sm font-medium text-green-800">{event.companyName}</p>
       <h1 className="mt-1 text-2xl font-bold tracking-tight">{event.name}</h1>
       <dl className="mt-5 grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
         <Detail label="When" value={formatEventDate(event.date)} />

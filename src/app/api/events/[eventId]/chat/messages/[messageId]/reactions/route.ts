@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { apiError, parseBody } from "@/lib/api";
 import { loadChatAccess } from "@/lib/chat-access";
+import { contactKey } from "@/lib/identity-match";
 import { summarizeReactions } from "@/lib/reactions";
 import { getMessage, toggleReaction } from "@/lib/store";
 import { reactionSchema } from "@/lib/validation";
@@ -21,9 +22,10 @@ export async function POST(request: Request, { params }: Context) {
     return apiError("Message not found", 404);
   }
 
-  const updated = await toggleReaction(messageId, parsed.data.emoji, access.member.email);
+  const viewerKey = contactKey(access.member);
+  const updated = await toggleReaction(messageId, parsed.data.emoji, viewerKey);
   if (!updated) return apiError("Message not found", 404);
   return NextResponse.json({
-    reactions: summarizeReactions(updated.reactions, access.member.email),
+    reactions: summarizeReactions(updated.reactions, viewerKey),
   });
 }

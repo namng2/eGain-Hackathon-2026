@@ -53,7 +53,7 @@ The chat page shows an event banner, a "Who's here" row, and a short welcome not
 
 **Profile pictures.** People can add an optional profile picture when they sign up, and add, change, or remove it any time from the account page (even after sign-ups close). It is cropped to a small square in the browser first. It shows next to their messages and in "Who's here", never on the public join page. Without one, the chat shows a colored circle with their initials.
 
-Access is checked by name and email like the rest of the app, so it is only as private as that is: anyone who knows a participant's name and email can read the chat.
+Access is checked by name and email (or phone number) like the rest of the app, so it is only as private as that is: anyone who knows a participant's name and email or phone can read the chat.
 
 ## Where data is stored
 
@@ -88,11 +88,11 @@ See [AGENTS.md](AGENTS.md) for conventions and notes for contributors.
 | `DELETE /api/participants/:id` | Participant or organizer | Leave an event, or remove someone |
 | `POST /api/account` | Anyone (with name and email) | Events organized and joined |
 | `POST /api/events/:id/chat` | Organizer or participant | Read the latest chat messages (no emails) |
-| `POST /api/events/:id/chat/messages` | Organizer or participant | Post a message (multipart form: name, email, text, optional image) |
+| `POST /api/events/:id/chat/messages` | Organizer or participant | Post a message (multipart form: name, email or phone, text, optional image) |
 | `DELETE /api/events/:id/chat/messages/:messageId` | Author or organizer | Delete a message and its image |
 | `GET /api/events/:id/chat/images/:imageId` | Anyone with the image link | Serve a chat image |
 | `POST /api/events/:id/chat/messages/:messageId/reactions` | Organizer or participant | Add or remove your emoji reaction |
-| `POST /api/participants/:id/avatar` | Participant or organizer | Set or replace a profile picture (multipart form: name, email, image, max 1 MB) |
+| `POST /api/participants/:id/avatar` | Participant or organizer | Set or replace a profile picture (multipart form: name, email or phone, image, max 1 MB) |
 | `DELETE /api/participants/:id/avatar` | Participant or organizer | Remove a profile picture |
 | `GET /api/events/:id/avatars/:avatarId` | Anyone with the picture link | Serve a profile picture |
 

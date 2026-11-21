@@ -5,6 +5,7 @@
  *
  * Running it again adds another demo event (it does not replace the old one).
  */
+import { contactKey } from "../src/lib/identity-match";
 import {
   addMessage,
   createEvent,
@@ -21,13 +22,18 @@ async function main() {
     budget: 25,
     stealLimit: 3,
     rules: "Wrapped gifts only. No electronics over $10.",
-    organizer: { name: "Demo Organizer", email: "organizer@example.com" },
+    organizer: {
+      name: "Demo Organizer",
+      email: "organizer@example.com",
+      phone: "",
+    },
   });
 
   const people = [
     {
       name: "Alex Rivera",
       email: "alex@example.com",
+      phone: "",
       department: "Engineering",
       attendance: "in_person" as const,
       giftTeaser: "Something for a plant lover",
@@ -35,7 +41,8 @@ async function main() {
     },
     {
       name: "Priya Shah",
-      email: "priya@example.com",
+      email: "",
+      phone: "+15555550123",
       department: "Support",
       attendance: "remote" as const,
       interests: ["board games", "coffee", "reading"],
@@ -43,6 +50,7 @@ async function main() {
     {
       name: "Sam Okafor",
       email: "sam@example.com",
+      phone: "",
       department: "Sales",
       attendance: "in_person" as const,
       giftTeaser: "Snacks, probably",
@@ -66,9 +74,9 @@ async function main() {
     text: "Excited! Is anyone coming in remotely?",
   });
 
-  await toggleReaction(welcome.id, "👍", "alex@example.com");
-  await toggleReaction(welcome.id, "🎁", "priya@example.com");
-  await toggleReaction(question.id, "🔥", "organizer@example.com");
+  await toggleReaction(welcome.id, "👍", contactKey({ email: "alex@example.com" }));
+  await toggleReaction(welcome.id, "🎁", contactKey({ phone: "+15555550123" }));
+  await toggleReaction(question.id, "🔥", contactKey({ email: "organizer@example.com" }));
 
   console.log(`Created "${event.name}" with ${people.length} sign-ups.`);
   console.log(`Share link path: /join/${event.id}`);

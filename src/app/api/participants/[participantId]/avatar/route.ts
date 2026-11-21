@@ -16,7 +16,7 @@ type Context = { params: Promise<{ participantId: string }> };
 const TOO_BIG = "That picture is too big. The limit is 1 MB.";
 
 /**
- * Set or replace a profile picture. Multipart form: name, email, image.
+ * Set or replace a profile picture. Multipart form: name, email or phone, image.
  * The person themselves or the organizer may do it. This works even after
  * sign-ups close, because a picture isn't part of the swap.
  */

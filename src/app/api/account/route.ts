@@ -5,7 +5,7 @@ import { toPublicEvent } from "@/lib/public-event";
 import {
   countParticipants,
   listEventsByOrganizer,
-  listParticipationsByEmail,
+  listParticipationsByContact,
 } from "@/lib/store";
 import type { AccountSummary } from "@/lib/types";
 import { identityOnlySchema } from "@/lib/validation";
@@ -16,11 +16,13 @@ export async function POST(request: Request) {
   if (!parsed.ok) return parsed.response;
   const { identity } = parsed.data;
 
-  const organizedEvents = (await listEventsByOrganizer(identity.email)).filter(
-    (event) => identitiesMatch(identity, event.organizer),
-  );
+  const organizedEvents = identity.email
+    ? (await listEventsByOrganizer(identity.email)).filter((event) =>
+        identitiesMatch(identity, event.organizer),
+      )
+    : [];
   const participations = (
-    await listParticipationsByEmail(identity.email)
+    await listParticipationsByContact(identity)
   ).filter(({ participant }) => identitiesMatch(identity, participant));
 
   const summary: AccountSummary = {

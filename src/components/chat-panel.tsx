@@ -158,6 +158,7 @@ function ChatPanel({
     const form = new FormData();
     form.set("name", identity.name);
     form.set("email", identity.email);
+    form.set("phone", identity.phone ?? "");
     if (text.trim()) form.set("text", text);
     if (image) form.set("image", image);
 

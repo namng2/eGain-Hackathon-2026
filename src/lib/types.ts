@@ -1,6 +1,9 @@
 export type Identity = {
   name: string;
+  /** Empty when the person identifies with a phone number instead. */
   email: string;
+  /** Empty when the person identifies with an email instead. */
+  phone: string;
 };
 
 export type EventStatus = "open" | "closed";
@@ -47,7 +50,9 @@ export type Participant = {
   id: string;
   eventId: string;
   name: string;
+  /** Empty when the person joined with a phone number. */
   email: string;
+  phone?: string;
   department?: string;
   attendance: Attendance;
   giftTeaser?: string;
@@ -90,6 +95,8 @@ export type ChatMessage = {
   authorName: string;
   /** Server-only. Never send this to a client (use toPublicMessage). */
   authorEmail: string;
+  /** Server-only. Set (with an empty email) for people who joined with a phone number. */
+  authorPhone?: string;
   text?: string;
   image?: { id: string; ext: string };
   /** Emoji to the (normalized) emails of people who reacted. Server-only. */

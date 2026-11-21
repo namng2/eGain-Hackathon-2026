@@ -6,6 +6,7 @@ import { useState, type FormEvent } from "react";
 import { attendanceLabel } from "@/lib/format";
 import { callApi, callApiForm } from "@/lib/client-api";
 import { errorText } from "@/lib/errors";
+import { parseContact } from "@/lib/identity-match";
 import { useIdentity } from "@/lib/use-identity";
 import type { Attendance, Identity, Participant, PublicEvent } from "@/lib/types";
 import { AvatarPicker } from "./avatar-picker";
@@ -44,7 +45,9 @@ function SignUpForm({
   onSaved: (identity: Identity) => void;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
-  const [email, setEmail] = useState(initial?.email ?? "");
+  const [contact, setContact] = useState(
+    initial?.email || initial?.phone || "",
+  );
   const [department, setDepartment] = useState("");
   const [attendance, setAttendance] = useState<Attendance>("in_person");
   const [giftTeaser, setGiftTeaser] = useState("");
@@ -60,6 +63,7 @@ function SignUpForm({
     event.preventDefault();
     setBusy(true);
     setError(null);
+    const { email, phone } = parseContact(contact);
     try {
       const data = await callApi<{ participant: Participant; created: boolean }>(
         `/api/events/${eventId}/participants`,
@@ -67,10 +71,11 @@ function SignUpForm({
           body: {
             name,
             email,
+            phone,
             department,
             attendance,
-            giftTeaser,
             interests,
+            giftTeaser,
           },
         },
       );
@@ -81,13 +86,14 @@ function SignUpForm({
           const form = new FormData();
           form.set("name", name);
           form.set("email", email);
+          form.set("phone", phone);
           form.set("image", avatar);
           await callApiForm(`/api/participants/${data.participant.id}/avatar`, form);
         } catch (err) {
           setAvatarProblem(errorText(err));
         }
       }
-      onSaved({ name: name.trim(), email: email.trim() });
+      onSaved({ name: name.trim(), email, phone });
       setCreated(data.created);
       // Re-run the server parts of this page so the sign-up count is current.
       router.refresh();
@@ -138,7 +144,7 @@ function SignUpForm({
     <Card>
       <h2 className="text-lg font-semibold">Sign up</h2>
       <p className="mt-1 text-sm text-stone-600">
-        Use the same name and email each time. That&apos;s how we know it&apos;s you.
+        Use the same name and email or phone each time. That&apos;s how we know it&apos;s you.
       </p>
       <p className="mt-1 text-sm text-stone-600">
         You can edit your gift hint and interests later from{" "}
@@ -149,7 +155,7 @@ function SignUpForm({
       </p>
       <form onSubmit={handleSubmit} className="mt-5 space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Your name">
+          <Field label="Full name">
             <input
               required
               value={name}
@@ -159,13 +165,13 @@ function SignUpForm({
               className={inputClass}
             />
           </Field>
-          <Field label="Email">
+          <Field label="Email or phone number">
             <input
               required
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={contact}
+              onChange={(e) => setContact(e.target.value)}
               autoComplete="email"
+              inputMode="email"
               maxLength={200}
               className={inputClass}
             />
@@ -207,7 +213,7 @@ function SignUpForm({
                   value={value}
                   checked={attendance === value}
                   onChange={() => setAttendance(value)}
-                  className="h-4 w-4 accent-emerald-700"
+                  className="h-4 w-4 accent-green-700"
                 />
                 {attendanceLabel(value)}
               </label>

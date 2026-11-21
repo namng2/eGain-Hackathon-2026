@@ -71,11 +71,11 @@ describe("toPublicMessage", () => {
     createdAt: "2026-11-20T23:00:00.000Z",
   };
 
-  const ctx = { viewerEmail: "bob@example.com", avatars: new Map<string, string>() };
+  const ctx = { viewerKey: "email:bob@example.com", avatars: new Map<string, string>() };
 
   it("never includes the author's or a reactor's email", () => {
     const view = toPublicMessage(
-      { ...stored, reactions: { "🔥": ["ann@example.com", "bob@example.com"] } },
+      { ...stored, reactions: { "🔥": ["email:ann@example.com", "email:bob@example.com"] } },
       ctx,
     );
     assert.equal(JSON.stringify(view).includes("@"), false);
@@ -129,7 +129,7 @@ describe("sendMessageSchema", () => {
 
   it("rejects a bad email", () => {
     assert.equal(
-      sendMessageSchema.safeParse({ identity: { name: "A", email: "nope" } }).success,
+      sendMessageSchema.safeParse({ identity: { name: "A", email: "nope", phone: "" } }).success,
       false,
     );
   });
@@ -152,10 +152,10 @@ describe("avatars in the chat", () => {
       text: "hi",
       createdAt: "2026-11-20T23:00:00.000Z",
     };
-    const view = toPublicMessage(message, { viewerEmail: "x@y.co", avatars });
+    const view = toPublicMessage(message, { viewerKey: "email:x@y.co", avatars });
     assert.equal(view.authorAvatarUrl, `/api/events/evt1/avatars/${"A".repeat(21)}`);
     assert.equal(
-      toPublicMessage({ ...message, authorEmail: "bob@example.com" }, { viewerEmail: "x@y.co", avatars }).authorAvatarUrl,
+      toPublicMessage({ ...message, authorEmail: "bob@example.com" }, { viewerKey: "email:x@y.co", avatars }).authorAvatarUrl,
       undefined,
     );
   });
@@ -163,7 +163,7 @@ describe("avatars in the chat", () => {
   it("lists the organizer first, once, and never exposes emails", () => {
     const avatars = buildAvatarMap("evt1", people);
     const members = toChatMembers(
-      { name: "Olivia Org", email: "olivia@example.com" },
+      { name: "Olivia Org", email: "olivia@example.com", phone: "" },
       [...people, { name: "Olivia Org", email: "OLIVIA@example.com" }],
       avatars,
     );
@@ -172,5 +172,73 @@ describe("avatars in the chat", () => {
       [["Olivia Org", true], ["Ann Lee", false], ["Bob Ray", false]],
     );
     assert.equal(JSON.stringify(members).includes("@"), false);
+  });
+});
+
+describe("people who joined with a phone number", () => {
+  const phoneAvatar = (c: string) => ({ id: c.repeat(21), ext: "jpg" });
+  const people = [
+    { name: "Priya Shah", email: "", phone: "+1 (555) 555-0123", avatar: phoneAvatar("P") },
+    { name: "Quinn Poe", email: "", phone: "+15555550999" },
+    { name: "Ann Lee", email: "ann@example.com", phone: "" },
+  ];
+
+  it("keeps phone-only people apart instead of sharing one empty email", () => {
+    const avatars = buildAvatarMap("evt1", people);
+    assert.equal(avatars.size, 1);
+    const base: ChatMessage = {
+      id: "m1",
+      eventId: "evt1",
+      authorName: "Priya Shah",
+      authorEmail: "",
+      authorPhone: "+15555550123",
+      text: "hi",
+      createdAt: "2026-11-20T23:00:00.000Z",
+    };
+    const view = (m: ChatMessage) =>
+      toPublicMessage(m, { viewerKey: "phone:+15555550123", avatars });
+    assert.equal(view(base).authorAvatarUrl, `/api/events/evt1/avatars/${"P".repeat(21)}`);
+    // A different phone-only author must not pick up Priya's picture.
+    assert.equal(
+      view({ ...base, authorName: "Quinn Poe", authorPhone: "+15555550999" }).authorAvatarUrl,
+      undefined,
+    );
+  });
+
+  it("marks a phone-only viewer's own reaction, and never leaks the phone number", () => {
+    const message: ChatMessage = {
+      id: "m2",
+      eventId: "evt1",
+      authorName: "Priya Shah",
+      authorEmail: "",
+      authorPhone: "+15555550123",
+      text: "hi",
+      reactions: { "🎁": ["phone:+15555550123"], "🔥": ["phone:+15555550999"] },
+      createdAt: "2026-11-20T23:00:00.000Z",
+    };
+    const view = toPublicMessage(message, {
+      viewerKey: "phone:+15555550123",
+      avatars: new Map(),
+    });
+    assert.deepEqual(view.reactions, [
+      { emoji: "🎁", count: 1, mine: true },
+      { emoji: "🔥", count: 1, mine: false },
+    ]);
+    assert.equal(JSON.stringify(view).includes("555"), false);
+  });
+
+  it("lists everyone once in the members row, with no contact details", () => {
+    const members = toChatMembers(
+      { name: "Olivia Org", email: "olivia@example.com", phone: "" },
+      people,
+      buildAvatarMap("evt1", people),
+    );
+    assert.deepEqual(
+      members.map((m) => m.name),
+      ["Olivia Org", "Priya Shah", "Quinn Poe", "Ann Lee"],
+    );
+    const text = JSON.stringify(members);
+    assert.equal(text.includes("@"), false);
+    assert.equal(text.includes("555"), false);
   });
 });

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { apiError, parseBody } from "@/lib/api";
 import { loadChatAccess } from "@/lib/chat-access";
-import { normalizeEmail } from "@/lib/identity-match";
+import { contactKey } from "@/lib/identity-match";
 import { deleteChatImage, getMessage, removeMessage } from "@/lib/store";
 import { identityOnlySchema } from "@/lib/validation";
 
@@ -22,7 +22,8 @@ export async function DELETE(request: Request, { params }: Context) {
   }
 
   const isAuthor =
-    normalizeEmail(message.authorEmail) === normalizeEmail(access.member.email);
+    contactKey({ email: message.authorEmail, phone: message.authorPhone }) ===
+    contactKey(access.member);
   if (access.role !== "organizer" && !isAuthor) {
     return apiError("You can only delete your own messages", 403);
   }

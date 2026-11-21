@@ -10,7 +10,11 @@ import path from "node:path";
 import { customAlphabet, nanoid } from "nanoid";
 import { imageTypeForExt, isImageId } from "./chat-image";
 import { isInterest } from "./gift-catalog";
-import { normalizeEmail } from "./identity-match";
+import {
+  contactKey,
+  normalizeEmail,
+  normalizePhone,
+} from "./identity-match";
 import { toggleReactionIn } from "./reactions";
 import type { ChatMessage, GiftEvent, Participant } from "./types";
 
@@ -96,6 +100,7 @@ export function createEvent(input: NewEvent): Promise<GiftEvent> {
       organizer: {
         name: input.organizer.name,
         email: normalizeEmail(input.organizer.email),
+        phone: "",
       },
       id,
       status: "open",
@@ -137,13 +142,16 @@ export async function listEventsByOrganizer(
 
 export type ParticipantInput = Omit<Participant, "id" | "eventId" | "joinedAt">;
 export type ParticipantChanges = Partial<
-  Pick<Participant, "department" | "attendance" | "giftTeaser" | "interests">
+  Pick<
+    Participant,
+    "department" | "attendance" | "giftTeaser" | "interests" | "phone"
+  >
 >;
 
 /**
- * Adds someone to an event. If the same name + email already signed up, their
- * entry is updated instead of duplicated. If the email is taken under a
- * different name, a StoreConflictError is thrown.
+ * Adds someone to an event. If the same name + email (or name + phone) already
+ * signed up, their entry is updated instead of duplicated. If that contact is
+ * taken under a different name, a StoreConflictError is thrown.
  */
 export function upsertParticipant(
   eventId: string,
@@ -151,27 +159,31 @@ export function upsertParticipant(
 ): Promise<{ participant: Participant; created: boolean }> {
   return mutate((data) => {
     const email = normalizeEmail(input.email);
+    const phone = normalizePhone(input.phone ?? "");
+    const key = contactKey({ email, phone });
     const existing = data.participants.find(
-      (p) => p.eventId === eventId && p.email === email,
+      (p) => p.eventId === eventId && contactKey(p) === key,
     );
     if (existing) {
       if (existing.name.toLowerCase() !== input.name.toLowerCase()) {
         throw new StoreConflictError(
-          "That email is already signed up under a different name. Use the same name, or manage the entry from the account page.",
+          "That email or phone is already signed up under a different name. Use the same name, or manage the entry from the account page.",
         );
       }
       Object.assign(existing, {
         name: input.name,
+        phone: phone || undefined,
         department: input.department,
         attendance: input.attendance,
-        giftTeaser: input.giftTeaser,
         interests: input.interests,
+        giftTeaser: input.giftTeaser,
       });
       return { participant: existing, created: false };
     }
     const participant: Participant = {
       ...input,
       email,
+      phone: phone || undefined,
       id: nanoid(12),
       eventId,
       joinedAt: new Date().toISOString(),
@@ -200,13 +212,14 @@ export async function countParticipants(eventId: string): Promise<number> {
   return data.participants.filter((p) => p.eventId === eventId).length;
 }
 
-export async function listParticipationsByEmail(
-  email: string,
-): Promise<{ participant: Participant; event: GiftEvent }[]> {
+export async function listParticipationsByContact(contact: {
+  email: string;
+  phone: string;
+}): Promise<{ participant: Participant; event: GiftEvent }[]> {
   const data = await readData();
-  const target = normalizeEmail(email);
+  const target = contactKey(contact);
   return data.participants
-    .filter((p) => p.email === target)
+    .filter((p) => contactKey(p) === target)
     .flatMap((participant) => {
       const event = data.events.find((e) => e.id === participant.eventId);
       return event ? [{ participant, event }] : [];
@@ -238,7 +251,7 @@ export function removeParticipant(id: string): Promise<boolean> {
 
 export type NewMessage = Pick<
   ChatMessage,
-  "eventId" | "authorName" | "authorEmail" | "text" | "image"
+  "eventId" | "authorName" | "authorEmail" | "authorPhone" | "text" | "image"
 >;
 
 export function addMessage(input: NewMessage): Promise<ChatMessage> {
@@ -246,6 +259,7 @@ export function addMessage(input: NewMessage): Promise<ChatMessage> {
     const message: ChatMessage = {
       ...input,
       authorEmail: normalizeEmail(input.authorEmail),
+      authorPhone: input.authorPhone ? normalizePhone(input.authorPhone) : undefined,
       id: nanoid(12),
       createdAt: new Date().toISOString(),
     };
@@ -345,16 +359,16 @@ export function setParticipantAvatar(
   });
 }
 
-/** Adds or removes one person's emoji reaction on a message. */
+/** Adds or removes one person's emoji reaction on a message. `personKey` is their contactKey. */
 export function toggleReaction(
   messageId: string,
   emoji: string,
-  email: string,
+  personKey: string,
 ): Promise<ChatMessage | undefined> {
   return mutate((data) => {
     const message = data.messages.find((m) => m.id === messageId);
     if (!message) return undefined;
-    message.reactions = toggleReactionIn(message.reactions, emoji, email);
+    message.reactions = toggleReactionIn(message.reactions, emoji, personKey);
     return message;
   });
 }

@@ -3,7 +3,7 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 export type ButtonVariant = "primary" | "secondary" | "danger";
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: "bg-emerald-700 text-white shadow-sm hover:bg-emerald-800",
+  primary: "bg-red-700 text-white shadow-sm hover:bg-red-800",
   secondary:
     "bg-white text-stone-800 ring-1 ring-inset ring-stone-300 hover:bg-stone-50",
   danger: "bg-white text-red-700 ring-1 ring-inset ring-red-200 hover:bg-red-50",
@@ -32,7 +32,7 @@ export function Button({
 }
 
 export const inputClass =
-  "mt-1 block w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-base text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-700/25 sm:text-sm";
+  "mt-1 block w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-base text-stone-900 shadow-sm placeholder:text-stone-400 focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-700/25 sm:text-sm";
 
 export function Field({
   label,
@@ -72,7 +72,7 @@ export function Card({
 
 const toneClasses = {
   error: "border-red-200 bg-red-50 text-red-800",
-  success: "border-emerald-200 bg-emerald-50 text-emerald-900",
+  success: "border-green-200 bg-green-50 text-green-900",
   info: "border-amber-200 bg-amber-50 text-amber-900",
 } as const;
 
@@ -98,7 +98,7 @@ export function StatusBadge({ status }: { status: "open" | "closed" }) {
   return (
     <span
       className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-        open ? "bg-emerald-100 text-emerald-800" : "bg-stone-200 text-stone-700"
+        open ? "bg-green-100 text-green-800" : "bg-stone-200 text-stone-700"
       }`}
     >
       {open ? "Sign-ups open" : "Sign-ups closed"}

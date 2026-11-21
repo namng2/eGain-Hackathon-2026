@@ -31,7 +31,7 @@ const formText = (value: FormDataEntryValue | null) =>
   typeof value === "string" ? value : undefined;
 
 /**
- * Parses a chat message sent as multipart form data (name, email, text, and an
+ * Parses a chat message sent as multipart form data (name, email or phone, text, and an
  * optional image file). The text fields are validated with sendMessageSchema;
  * the image is returned as-is for the route to check.
  */
@@ -53,6 +53,7 @@ export async function parseMessageForm(request: Request): Promise<
     identity: {
       name: formText(form.get("name")) ?? "",
       email: formText(form.get("email")) ?? "",
+      phone: formText(form.get("phone")) ?? "",
     },
     text: formText(form.get("text")),
   });
@@ -67,7 +68,7 @@ export async function parseMessageForm(request: Request): Promise<
   };
 }
 
-/** Parses a profile picture upload: multipart form with name, email, and an image file. */
+/** Parses a profile picture upload: multipart form with name, email or phone, and an image file. */
 export async function parseAvatarForm(request: Request): Promise<
   | { ok: true; identity: z.output<typeof identityOnlySchema>["identity"]; image: File | null }
   | { ok: false; response: NextResponse }
@@ -82,6 +83,7 @@ export async function parseAvatarForm(request: Request): Promise<
     identity: {
       name: formText(form.get("name")) ?? "",
       email: formText(form.get("email")) ?? "",
+      phone: formText(form.get("phone")) ?? "",
     },
   });
   if (!result.success) {

@@ -30,7 +30,7 @@ export function EventFields({ defaults = {} }: { defaults?: EventFormDefaults })
           required
           maxLength={120}
           defaultValue={defaults.companyName}
-          placeholder="Acme Corp"
+          placeholder="eGain"
           className={inputClass}
         />
       </Field>
@@ -43,7 +43,7 @@ export function EventFields({ defaults = {} }: { defaults?: EventFormDefaults })
           className={inputClass}
         />
       </Field>
-      <Field label="Location or video link">
+      <Field label="Location or Link">
         <input
           name="location"
           required
@@ -61,7 +61,8 @@ export function EventFields({ defaults = {} }: { defaults?: EventFormDefaults })
           min={1}
           max={10000}
           step={1}
-          defaultValue={defaults.budget ?? 25}
+          defaultValue={defaults.budget}
+          placeholder="25"
           className={inputClass}
         />
       </Field>
@@ -73,7 +74,8 @@ export function EventFields({ defaults = {} }: { defaults?: EventFormDefaults })
           min={1}
           max={10}
           step={1}
-          defaultValue={defaults.stealLimit ?? 3}
+          defaultValue={defaults.stealLimit}
+          placeholder="3"
           className={inputClass}
         />
       </Field>
