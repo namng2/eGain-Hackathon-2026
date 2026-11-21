@@ -1,70 +1,106 @@
 "use client";
 
-import { useState, useSyncExternalStore, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
+import dynamic from "next/dynamic";
 import { nanoid } from "nanoid";
 import { Alert, Button, Card, Field, inputClass } from "@/components/ui";
 import {
-  BUDGETS,
-  STEAL_LIMIT,
+  GameRuleError,
   applyMove,
-  movesFor,
-  newLobby,
+  getAvailableMoves,
   startGame,
-  type Budget,
-  type PartyGame,
-  type PartyPlayer,
-} from "@/lib/party-game";
+  toPlayerView,
+} from "@/lib/game";
+import type { GameMove, GameState } from "@/lib/types";
 
 const MIN_PLAYERS = 3;
+const STEAL_LIMIT = 3;
+
+type LobbyPlayer = { id: string; name: string; gift: string };
+type PartyState = { players: LobbyPlayer[]; game: GameState | null };
 
 function storageKey(code: string) {
-  return `white-elephant-party:${code}`;
+  return `white-elephant-game:${code}`;
 }
 
-function loadGame(code: string): PartyGame {
+function loadState(code: string): PartyState {
   try {
     const raw = localStorage.getItem(storageKey(code));
-    if (raw) return JSON.parse(raw) as PartyGame;
+    if (raw) return JSON.parse(raw) as PartyState;
   } catch {
-    // Corrupt or unavailable storage: start with a fresh lobby.
+    // Corrupt or unavailable storage: start with an empty lobby.
   }
-  return newLobby();
+  return { players: [], game: null };
+}
+
+function errorText(err: unknown): string {
+  return err instanceof GameRuleError ? err.message : "Something went wrong.";
+}
+
+function PartyLoading() {
+  return (
+    <Card>
+      <p className="text-sm text-stone-500">Loading party…</p>
+    </Card>
+  );
 }
 
 /**
  * Party page UI. This is a single-device prototype: state lives in this browser,
- * so everyone plays on one screen. Real multi-phone play needs the server side.
+ * so everyone plays on one screen. The rules come from src/lib/game.ts.
+ *
+ * The board reads localStorage, so it is rendered only in the browser. The
+ * server and the first browser render both show the loading card, which keeps
+ * hydration consistent.
  */
+const ClientPartyGame = dynamic(() => Promise.resolve(PartyGameView), {
+  ssr: false,
+  loading: () => <PartyLoading />,
+});
+
 export function PartyBoard({ code }: { code: string }) {
-  // False on the server and during hydration, true once in the browser.
-  const mounted = useSyncExternalStore(
-    noopSubscribe,
-    () => true,
-    () => false,
-  );
-
-  if (!mounted) {
-    return (
-      <Card>
-        <p className="text-sm text-stone-500">Loading party…</p>
-      </Card>
-    );
-  }
-  return <PartyGameView key={code} code={code} />;
-}
-
-function noopSubscribe() {
-  return () => {};
+  return <ClientPartyGame key={code} code={code} />;
 }
 
 function PartyGameView({ code }: { code: string }) {
-  const [game, setGame] = useState<PartyGame>(() => loadGame(code));
+  const [state, setState] = useState<PartyState>(() => loadState(code));
+  const [error, setError] = useState<string | null>(null);
 
-  function commit(next: PartyGame) {
-    setGame(next);
+  function save(next: PartyState) {
+    setState(next);
     localStorage.setItem(storageKey(code), JSON.stringify(next));
   }
 
+  function start() {
+    try {
+      const game = startGame({
+        eventId: code,
+        playerIds: state.players.map((p) => p.id),
+        gifts: state.players.map((p) => ({
+          id: `gift-${p.id}`,
+          contributorId: p.id,
+          name: p.gift,
+        })),
+        stealLimit: STEAL_LIMIT,
+      });
+      save({ ...state, game });
+      setError(null);
+    } catch (err) {
+      setError(errorText(err));
+    }
+  }
+
+  function makeMove(move: GameMove) {
+    if (!state.game) return;
+    try {
+      save({ ...state, game: applyMove(state.game, move) });
+      setError(null);
+    } catch (err) {
+      setError(errorText(err));
+    }
+  }
+
+  const game = state.game;
   return (
     <div className="space-y-6">
       <div>
@@ -72,90 +108,68 @@ function PartyGameView({ code }: { code: string }) {
           Party {code}
         </p>
         <h1 className="mt-1 text-2xl font-bold tracking-tight">
-          {game.phase === "lobby"
+          {!game
             ? "Add the players"
-            : game.phase === "playing"
-              ? "Unwrap and steal"
-              : "Round over"}
+            : game.phase === "finished"
+              ? "Round over"
+              : "Unwrap and steal"}
         </h1>
       </div>
 
-      {game.phase === "lobby" ? (
-        <Lobby game={game} commit={commit} />
+      {error ? <Alert tone="error">{error}</Alert> : null}
+
+      {game ? (
+        <Round
+          game={game}
+          players={state.players}
+          onMove={makeMove}
+          onBackToLobby={() => save({ players: state.players, game: null })}
+        />
       ) : (
-        <Round game={game} commit={commit} />
+        <Lobby
+          players={state.players}
+          onChange={(players) => save({ ...state, players })}
+          onStart={start}
+        />
       )}
     </div>
   );
 }
 
 function Lobby({
-  game,
-  commit,
+  players,
+  onChange,
+  onStart,
 }: {
-  game: PartyGame;
-  commit: (next: PartyGame) => void;
+  players: LobbyPlayer[];
+  onChange: (players: LobbyPlayer[]) => void;
+  onStart: () => void;
 }) {
-  const allConfirmed =
-    game.players.length >= MIN_PLAYERS && game.players.every((p) => p.confirmed);
-
-  function setPlayers(players: PartyPlayer[]) {
-    commit({ ...game, players });
-  }
-
-  function toggleConfirm(id: string) {
-    setPlayers(
-      game.players.map((p) => (p.id === id ? { ...p, confirmed: !p.confirmed } : p)),
-    );
-  }
-
-  function remove(id: string) {
-    setPlayers(game.players.filter((p) => p.id !== id));
-  }
+  const canStart = players.length >= MIN_PLAYERS;
 
   return (
     <div className="space-y-6">
-      <AddPlayerForm
-        onAdd={(player) => setPlayers([...game.players, player])}
-      />
+      <AddPlayerForm onAdd={(player) => onChange([...players, player])} />
 
       <Card>
         <div className="flex items-center justify-between gap-4">
           <h2 className="font-semibold">Players</h2>
           <span className="text-sm text-stone-500">
-            {game.players.filter((p) => p.confirmed).length} of {game.players.length}{" "}
-            confirmed
+            {players.length} joined · gifts stay hidden until unwrapped
           </span>
         </div>
 
-        {game.players.length === 0 ? (
+        {players.length === 0 ? (
           <p className="mt-4 text-sm text-stone-500">No one has joined yet.</p>
         ) : (
           <ul className="mt-4 divide-y divide-stone-200">
-            {game.players.map((p) => (
-              <li key={p.id} className="flex flex-wrap items-center gap-3 py-3">
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium">{p.name}</p>
-                  <p className="truncate text-sm text-stone-600">
-                    {p.interests} · up to ${p.budget}
-                  </p>
-                </div>
-                <span
-                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    p.confirmed
-                      ? "bg-green-100 text-green-800"
-                      : "bg-amber-100 text-amber-900"
-                  }`}
-                >
-                  {p.confirmed ? "Confirmed" : "Waiting"}
-                </span>
+            {players.map((p) => (
+              <li key={p.id} className="flex items-center gap-3 py-3">
+                <p className="min-w-0 flex-1 font-medium">{p.name}</p>
                 <Button
-                  variant="secondary"
-                  onClick={() => toggleConfirm(p.id)}
+                  variant="danger"
+                  onClick={() => onChange(players.filter((x) => x.id !== p.id))}
                 >
-                  {p.confirmed ? "Edit" : "Confirm"}
-                </Button>
-                <Button variant="danger" onClick={() => remove(p.id)}>
                   Remove
                 </Button>
               </li>
@@ -165,17 +179,13 @@ function Lobby({
       </Card>
 
       <div className="space-y-3">
-        {!allConfirmed ? (
+        {!canStart ? (
           <p className="text-sm text-stone-600">
-            Start unlocks when at least {MIN_PLAYERS} people are in and everyone has
-            confirmed.
+            Start unlocks when at least {MIN_PLAYERS} people have joined.
           </p>
         ) : null}
         <div className="flex justify-end">
-          <Button
-            disabled={!allConfirmed}
-            onClick={() => commit(startGame(game.players))}
-          >
+          <Button disabled={!canStart} onClick={onStart}>
             Start the round
           </Button>
         </div>
@@ -184,35 +194,32 @@ function Lobby({
   );
 }
 
-function AddPlayerForm({ onAdd }: { onAdd: (player: PartyPlayer) => void }) {
+function AddPlayerForm({ onAdd }: { onAdd: (player: LobbyPlayer) => void }) {
   const [name, setName] = useState("");
-  const [interests, setInterests] = useState("");
-  const [budget, setBudget] = useState<Budget>(25);
+  const [gift, setGift] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!name.trim() || !interests.trim()) {
-      setError("Add a name and at least one interest.");
+    if (!name.trim() || !gift.trim()) {
+      setError("Add a name and the gift you're bringing.");
       return;
     }
     setError(null);
     onAdd({
       id: nanoid(8),
       name: name.trim().replace(/\s+/g, " "),
-      interests: interests.trim(),
-      budget,
-      confirmed: false,
+      gift: gift.trim(),
     });
     setName("");
-    setInterests("");
+    setGift("");
   }
 
   return (
     <Card>
       <h2 className="font-semibold">Add a player</h2>
       <p className="mt-1 text-sm text-stone-600">
-        Interests are what the gift is built from. Separate them with commas.
+        Each player brings one gift. Its name stays hidden until it is unwrapped.
       </p>
       <form onSubmit={handleSubmit} className="mt-5 space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -224,38 +231,16 @@ function AddPlayerForm({ onAdd }: { onAdd: (player: PartyPlayer) => void }) {
               className={inputClass}
             />
           </Field>
-          <Field label="Interests">
+          <Field label="Gift you're bringing">
             <input
-              value={interests}
-              onChange={(e) => setInterests(e.target.value)}
-              placeholder="coffee, hiking, board games"
-              maxLength={300}
+              value={gift}
+              onChange={(e) => setGift(e.target.value)}
+              placeholder="Candle set"
+              maxLength={120}
               className={inputClass}
             />
           </Field>
         </div>
-
-        <fieldset className="space-y-2">
-          <legend className="text-sm font-medium text-stone-800">Budget</legend>
-          <div className="flex flex-wrap gap-2">
-            {BUDGETS.map((value) => (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={budget === value}
-                onClick={() => setBudget(value)}
-                className={`rounded-full px-4 py-1.5 text-sm font-semibold ring-1 ring-inset transition-colors ${
-                  budget === value
-                    ? "bg-green-700 text-white ring-green-700"
-                    : "bg-white text-stone-800 ring-stone-300 hover:bg-stone-50"
-                }`}
-              >
-                ${value}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-
         {error ? <Alert tone="error">{error}</Alert> : null}
         <div className="flex justify-end">
           <Button type="submit">Add player</Button>
@@ -267,77 +252,82 @@ function AddPlayerForm({ onAdd }: { onAdd: (player: PartyPlayer) => void }) {
 
 function Round({
   game,
-  commit,
+  players,
+  onMove,
+  onBackToLobby,
 }: {
-  game: PartyGame;
-  commit: (next: PartyGame) => void;
+  game: GameState;
+  players: LobbyPlayer[];
+  onMove: (move: GameMove) => void;
+  onBackToLobby: () => void;
 }) {
-  const playing = game.phase === "playing";
-  const current = game.order[game.turn];
-  const currentName =
-    game.players.find((p) => p.id === current)?.name ?? "Someone";
-  const moves = playing ? movesFor(game, current) : [];
+  // Gift names come from the player view, so wrapped gifts stay hidden.
+  const view = toPlayerView(game);
+  const moves = getAvailableMoves(game);
+  const actor = moves.playerId;
   const nameOf = (id: string | null) =>
-    game.players.find((p) => p.id === id)?.name ?? "Someone";
+    players.find((p) => p.id === id)?.name ?? "Someone";
+  const finished = game.phase === "finished";
 
   return (
     <div className="space-y-6">
-      {playing ? (
-        <Alert tone="info">
-          <p className="font-semibold">{currentName}&apos;s turn</p>
-          <p className="mt-1">{game.message}</p>
-        </Alert>
-      ) : (
+      {finished ? (
         <Alert tone="success">
           <p className="font-semibold">Everyone has a gift.</p>
-          <p className="mt-1">{game.message}</p>
+        </Alert>
+      ) : (
+        <Alert tone="info">
+          <p className="font-semibold">
+            {game.phase === "final"
+              ? `${nameOf(actor)} can swap their gift for any unfrozen gift, or pass.`
+              : `${nameOf(actor)}'s turn`}
+          </p>
         </Alert>
       )}
 
       <ul className="grid gap-4 sm:grid-cols-2">
-        {game.gifts.map((gift) => {
-          const move = moves.find((m) => m.giftId === gift.id);
-          const revealed = gift.opened || !playing;
+        {view.gifts.map((gift) => {
+          const canOpen = actor !== null && moves.openable.includes(gift.id);
+          const canSteal = actor !== null && moves.stealable.includes(gift.id);
           return (
             <li key={gift.id}>
               <Card className="flex h-full flex-col">
                 <div className="flex items-start justify-between gap-3">
                   <p className="font-semibold">
-                    {revealed ? gift.title : "Wrapped gift"}
+                    {gift.opened ? gift.name : "Wrapped gift"}
                   </p>
-                  {gift.locked ? (
+                  {gift.stealCount >= game.stealLimit ? (
                     <span className="shrink-0 rounded-full bg-stone-200 px-2.5 py-0.5 text-xs font-medium text-stone-700">
-                      Locked
+                      Frozen
                     </span>
                   ) : null}
                 </div>
-
-                {revealed ? (
-                  <p className="mt-2 text-sm text-stone-600">{gift.description}</p>
-                ) : null}
-
                 <p className="mt-3 text-xs text-stone-500">
                   {gift.holderId
-                    ? `Held by ${nameOf(gift.holderId)} · ${gift.steals}/${STEAL_LIMIT} steals`
+                    ? `Held by ${nameOf(gift.holderId)} · ${gift.stealCount}/${game.stealLimit} steals`
                     : "Not picked up yet"}
                 </p>
-                {!playing ? (
-                  <p className="mt-1 text-xs text-stone-500">
-                    Inspired by {nameOf(gift.originId)} · ${gift.price}
-                  </p>
-                ) : null}
-
-                {move ? (
-                  <div className="mt-4">
-                    <Button
-                      onClick={() =>
-                        commit(applyMove(game, { type: move.type, giftId: gift.id }))
-                      }
-                    >
-                      {move.type === "unwrap"
-                        ? "Unwrap"
-                        : `Steal from ${nameOf(gift.holderId)}`}
-                    </Button>
+                {canOpen || canSteal ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {canOpen && actor ? (
+                      <Button
+                        onClick={() =>
+                          onMove({ type: "open", playerId: actor, giftId: gift.id })
+                        }
+                      >
+                        Unwrap
+                      </Button>
+                    ) : null}
+                    {canSteal && actor ? (
+                      <Button
+                        variant="secondary"
+                        onClick={() =>
+                          onMove({ type: "steal", playerId: actor, giftId: gift.id })
+                        }
+                      >
+                        Steal from {nameOf(gift.holderId)}
+                      </Button>
+                    ) : null}
                   </div>
                 ) : null}
               </Card>
@@ -346,17 +336,13 @@ function Round({
         })}
       </ul>
 
-      <div className="flex justify-end">
-        <Button
-          variant="secondary"
-          onClick={() =>
-            commit({
-              ...newLobby(
-                game.players.map((p) => ({ ...p, confirmed: false })),
-              ),
-            })
-          }
-        >
+      <div className="flex flex-wrap justify-end gap-3">
+        {moves.canPass && actor ? (
+          <Button onClick={() => onMove({ type: "pass", playerId: actor })}>
+            Keep my gift
+          </Button>
+        ) : null}
+        <Button variant="secondary" onClick={onBackToLobby}>
           Back to the lobby
         </Button>
       </div>

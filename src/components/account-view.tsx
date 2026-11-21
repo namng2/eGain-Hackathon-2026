@@ -24,13 +24,14 @@ import {
 export function AccountView() {
   return (
     <div className="space-y-6">
-      <div>
+      <div className="text-center">
         <h1 className="text-2xl font-bold tracking-tight">My account</h1>
         <p className="mt-1 text-sm text-stone-600">
           The events you organize and the events you&apos;ve joined.
         </p>
       </div>
       <IdentityGate
+        bare
         title="Find my events"
         description="Enter the name and email or phone you used to sign up or create an event. There's no password yet, so anyone who knows these details can see this account."
       >
@@ -89,7 +90,7 @@ function AccountDetails({
 
   return (
     <div className="space-y-8">
-      <Card>
+      <div className="text-center">
         <p className="text-sm text-stone-600">
           Signed in as <strong className="text-stone-900">{identity.name}</strong> (
           {identity.email || identity.phone}).{" "}
@@ -101,7 +102,7 @@ function AccountDetails({
             Not you?
           </button>
         </p>
-      </Card>
+      </div>
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold">Events I&apos;m organizing</h2>
