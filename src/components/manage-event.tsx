@@ -1,9 +1,11 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
 import { toCsv } from "@/lib/csv";
 import { callApi } from "@/lib/client-api";
 import { errorText } from "@/lib/errors";
+import { MIN_GAME_PLAYERS } from "@/lib/event-game";
 import {
   attendanceLabel,
   formatBudget,
@@ -56,6 +58,7 @@ function ManageView({
   onForget: () => void;
 }) {
   const origin = useOrigin();
+  const router = useRouter();
   const [roster, setRoster] = useState<Roster | null>(null);
   const [poll, setPoll] = useState<PollData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -108,6 +111,25 @@ function ManageView({
     }
   }
 
+  /** Closes sign-ups so the player list can't change, then opens the game. */
+  async function openGame(closeFirst: boolean) {
+    if (closeFirst) {
+      setBusy(true);
+      setNotice(null);
+      try {
+        await callApi(`/api/events/${eventId}`, {
+          method: "PATCH",
+          body: { identity, changes: { status: "closed" } },
+        });
+      } catch (err) {
+        setNotice({ tone: "error", text: errorText(err) });
+        setBusy(false);
+        return;
+      }
+    }
+    router.push(`/events/${eventId}/game`);
+  }
+
   async function removeParticipant(participant: Participant) {
     if (!window.confirm(`Remove ${participant.name} from this event? This can't be undone.`)) {
       return;
@@ -131,14 +153,14 @@ function ManageView({
   function exportCsv() {
     if (!roster) return;
     const rows = [
-      ["Name", "Email or phone", "Department", "Attendance", "Interests", "Gift hint", "Joined"],
+      ["Name", "Email or phone", "Department", "Attendance", "Interests", "Gift added", "Joined"],
       ...roster.participants.map((p) => [
         p.name,
         p.email || p.phone,
         p.department,
         attendanceLabel(p.attendance),
         p.interests.join(", "),
-        p.giftTeaser,
+        p.gift ? "Yes" : "No",
         p.joinedAt,
       ]),
     ];
@@ -173,6 +195,8 @@ function ManageView({
   const { event, participants } = roster;
   const shareUrl = `${origin}/join/${eventId}`;
   const nextStatus = event.status === "open" ? "closed" : "open";
+  const enoughPlayers = participants.length >= MIN_GAME_PLAYERS;
+  const missingGifts = participants.filter((p) => !p.gift).length;
 
   return (
     <div className="space-y-6">
@@ -258,6 +282,36 @@ function ManageView({
         </div>
       </Card>
 
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">White elephant game</h2>
+            <p className="mt-1 text-sm text-stone-600">
+              {event.status === "open"
+                ? "Starting the game closes sign-ups, so the player list can't change. Play on this screen for everyone."
+                : "Play on this screen for everyone. Gifts stay hidden until they're unwrapped."}
+            </p>
+            {!enoughPlayers ? (
+              <p className="mt-1 text-sm text-stone-500">
+                You need at least {MIN_GAME_PLAYERS} sign-ups to start.
+              </p>
+            ) : null}
+            {enoughPlayers && missingGifts > 0 ? (
+              <p className="mt-1 text-sm text-amber-800">
+                {missingGifts} {missingGifts === 1 ? "person hasn't" : "people haven't"} added
+                a gift yet. Their gift will show as a mystery gift.
+              </p>
+            ) : null}
+          </div>
+          <Button
+            disabled={busy || !enoughPlayers}
+            onClick={() => void openGame(event.status === "open")}
+          >
+            {event.status === "open" ? "Start game" : "Open game"}
+          </Button>
+        </div>
+      </Card>
+
       {poll ? (
         <PollPanel
           poll={poll}
@@ -320,7 +374,7 @@ function ManageView({
                   <th className="px-4 py-2 font-medium">Department</th>
                   <th className="px-4 py-2 font-medium">Attendance</th>
                   <th className="px-4 py-2 font-medium">Interests</th>
-                  <th className="px-4 py-2 font-medium">Gift hint</th>
+                  <th className="px-4 py-2 font-medium">Gift</th>
                   <th className="px-4 py-2 font-medium">Joined</th>
                   <th className="px-4 py-2">
                     <span className="sr-only">Actions</span>
@@ -337,7 +391,9 @@ function ManageView({
                     <td className="px-4 py-3 text-stone-600">
                       {p.interests.length > 0 ? p.interests.join(", ") : "—"}
                     </td>
-                    <td className="px-4 py-3 text-stone-600">{p.giftTeaser ?? "—"}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-stone-600">
+                      {p.gift ? "Gift added" : "No gift yet"}
+                    </td>
                     <td className="whitespace-nowrap px-4 py-3 text-stone-500">
                       {formatJoinedDate(p.joinedAt)}
                     </td>

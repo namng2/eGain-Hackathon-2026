@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Lets people on the same Wi-Fi use the dev server by its network address.
+  allowedDevOrigins: ["10.*.*.*", "192.168.*.*"],
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {

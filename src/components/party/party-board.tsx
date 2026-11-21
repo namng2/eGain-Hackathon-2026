@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { nanoid } from "nanoid";
 import { Alert, Button, Card, Field, inputClass } from "@/components/ui";
@@ -16,7 +16,7 @@ import type { GameMove, GameState } from "@/lib/types";
 const MIN_PLAYERS = 3;
 const STEAL_LIMIT = 3;
 
-type LobbyPlayer = { id: string; name: string; gift: string };
+export type LobbyPlayer = { id: string; name: string; gift: string };
 type PartyState = { players: LobbyPlayer[]; game: GameState | null };
 
 function storageKey(code: string) {
@@ -123,7 +123,14 @@ function PartyGameView({ code }: { code: string }) {
           game={game}
           players={state.players}
           onMove={makeMove}
-          onBackToLobby={() => save({ players: state.players, game: null })}
+          actions={
+            <Button
+              variant="secondary"
+              onClick={() => save({ players: state.players, game: null })}
+            >
+              Back to the lobby
+            </Button>
+          }
         />
       ) : (
         <Lobby
@@ -250,16 +257,17 @@ function AddPlayerForm({ onAdd }: { onAdd: (player: LobbyPlayer) => void }) {
   );
 }
 
-function Round({
+/** The game board. `actions` are extra buttons shown next to "Keep my gift". */
+export function Round({
   game,
   players,
   onMove,
-  onBackToLobby,
+  actions,
 }: {
   game: GameState;
-  players: LobbyPlayer[];
+  players: Pick<LobbyPlayer, "id" | "name">[];
   onMove: (move: GameMove) => void;
-  onBackToLobby: () => void;
+  actions?: ReactNode;
 }) {
   // Gift names come from the player view, so wrapped gifts stay hidden.
   const view = toPlayerView(game);
@@ -342,9 +350,7 @@ function Round({
             Keep my gift
           </Button>
         ) : null}
-        <Button variant="secondary" onClick={onBackToLobby}>
-          Back to the lobby
-        </Button>
+        {actions}
       </div>
     </div>
   );

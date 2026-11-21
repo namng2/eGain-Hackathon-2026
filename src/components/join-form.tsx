@@ -49,7 +49,7 @@ function SignUpForm({
   );
   const [department, setDepartment] = useState("");
   const [attendance, setAttendance] = useState<Attendance>("in_person");
-  const [giftTeaser, setGiftTeaser] = useState("");
+  const [gift, setGift] = useState("");
   const [interests, setInterests] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +72,7 @@ function SignUpForm({
             department,
             attendance,
             interests,
-            giftTeaser,
+            gift,
           },
         },
       );
@@ -119,7 +119,7 @@ function SignUpForm({
         Use the same name and email or phone each time. That&apos;s how we know it&apos;s you.
       </p>
       <p className="mt-1 text-sm text-stone-600">
-        You can edit your gift hint and interests later from{" "}
+        You can edit your gift and interests later from{" "}
         <Link href="/account" className="font-medium text-emerald-800 underline">
           My account
         </Link>
@@ -181,13 +181,15 @@ function SignUpForm({
         </fieldset>
 
         <Field
-          label="Gift hint (optional)"
-          hint="A short hint about your gift. The organizer can see it. You can edit it later."
+          label="What gift are you bringing?"
+          hint="Kept secret. It's revealed only when someone unwraps it."
         >
           <input
-            value={giftTeaser}
-            onChange={(e) => setGiftTeaser(e.target.value)}
-            maxLength={200}
+            required
+            value={gift}
+            onChange={(e) => setGift(e.target.value)}
+            maxLength={120}
+            placeholder="Scented candle set"
             className={inputClass}
           />
         </Field>

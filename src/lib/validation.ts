@@ -109,6 +109,12 @@ const interests = z
     message: `Pick up to ${MAX_INTERESTS} interests`,
   });
 
+const gift = z
+  .string({ error: "Tell us what gift you're bringing" })
+  .trim()
+  .min(1, "Tell us what gift you're bringing")
+  .max(120, "Keep the gift under 120 characters");
+
 const participantFields = {
   department: z
     .string()
@@ -119,12 +125,7 @@ const participantFields = {
   attendance: z.enum(["in_person", "remote"], {
     error: "Choose in person or remote",
   }),
-  giftTeaser: z
-    .string()
-    .trim()
-    .max(200)
-    .optional()
-    .transform((v) => (v ? v : undefined)),
+  gift: gift.optional(),
   interests: interests.optional(),
 };
 
@@ -134,6 +135,7 @@ export const joinEventSchema = z
     email,
     phone,
     ...participantFields,
+    gift,
     // A new sign-up with no interests stores an empty list.
     interests: interests.optional().transform((items) => items ?? []),
   })

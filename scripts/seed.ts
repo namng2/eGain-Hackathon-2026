@@ -30,7 +30,7 @@ async function main() {
       phone: "",
       department: "Engineering",
       attendance: "in_person" as const,
-      giftTeaser: "Something for a plant lover",
+      gift: "Mini succulent set",
       interests: ["gardening", "coffee", "hiking"],
     },
     {
@@ -39,6 +39,7 @@ async function main() {
       phone: "+15555550123",
       department: "Support",
       attendance: "remote" as const,
+      gift: "Cooperative board game",
       interests: ["board games", "coffee", "reading"],
     },
     {
@@ -47,7 +48,7 @@ async function main() {
       phone: "",
       department: "Sales",
       attendance: "in_person" as const,
-      giftTeaser: "Snacks, probably",
+      gift: "Gourmet snack box",
       interests: ["cooking", "running", "board games"],
     },
   ];

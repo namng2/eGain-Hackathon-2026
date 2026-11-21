@@ -63,7 +63,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           {children}
         </main>
         <footer className="border-t-4 border-green-800 bg-green-900 text-green-50">
-          <div className="mx-auto max-w-5xl whitespace-nowrap px-4 py-4 text-center text-sm italic text-green-100">
+          <div className="mx-auto max-w-5xl px-4 py-4 text-center text-sm italic text-green-100">
             &ldquo;May you never be too grown up to search the skies on Christmas Eve.&rdquo;
           </div>
         </footer>

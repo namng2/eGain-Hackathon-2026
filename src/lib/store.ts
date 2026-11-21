@@ -38,11 +38,16 @@ async function readData(): Promise<StoreData> {
     return {
       events: parsed.events ?? [],
       // Entries saved before interests existed get an empty list, and any
-      // free-text interests saved before the fixed list are dropped.
-      participants: (parsed.participants ?? []).map((p) => ({
-        ...p,
-        interests: (p.interests ?? []).filter(isInterest),
-      })),
+      // free-text interests saved before the fixed list are dropped. Entries
+      // saved before the gift field keep their old "gift hint" as the gift.
+      participants: (parsed.participants ?? []).map((entry) => {
+        const { giftTeaser, ...p } = entry as Participant & { giftTeaser?: string };
+        return {
+          ...p,
+          gift: p.gift ?? giftTeaser,
+          interests: (p.interests ?? []).filter(isInterest),
+        };
+      }),
     };
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
@@ -137,7 +142,7 @@ export type ParticipantInput = Omit<Participant, "id" | "eventId" | "joinedAt">;
 export type ParticipantChanges = Partial<
   Pick<
     Participant,
-    "department" | "attendance" | "giftTeaser" | "interests" | "phone"
+    "department" | "attendance" | "gift" | "interests" | "phone"
   >
 >;
 
@@ -169,7 +174,7 @@ export function upsertParticipant(
         department: input.department,
         attendance: input.attendance,
         interests: input.interests,
-        giftTeaser: input.giftTeaser,
+        gift: input.gift,
       });
       return { participant: existing, created: false };
     }

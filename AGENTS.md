@@ -7,8 +7,12 @@ Guide for anyone (human or automated tool) working in this repo.
 A web app for running an office **white elephant gift exchange**.
 
 1. An organizer creates an event and gets a **share link** (`/join/<eventId>`).
-2. Colleagues open the link and **sign up** with a form.
+2. Colleagues open the link and **sign up** with a form, including the gift
+   they're bringing.
 3. Everyone **manages their own entry** on the account page.
+4. On the dashboard, the organizer clicks **Start game**. That closes sign-ups
+   and opens `/events/<eventId>/game`, where the organizer plays the game on
+   one screen for everyone.
 
 Current scope is a **first draft**:
 
@@ -18,9 +22,14 @@ Current scope is a **first draft**:
 - **No database.** Data lives in `data/store.json` on the server. It is
   gitignored and created on first write.
 - **Interests poll and gift ideas** exist. See "Interests poll" under Conventions.
-- **Game rules exist, but aren't connected yet.** `src/lib/game.ts` runs a
-  game (turn order, opening, stealing, freezing, final steal), but nothing
-  saves a game or exposes it through routes or pages yet.
+- **The game runs on one screen.** Both game pages use the rules in
+  `src/lib/game.ts` and save the game in the host's browser (`localStorage`),
+  not on the server. Other devices can't join a game in progress.
+  - `/events/<eventId>/game`: the event's game. Players, gifts, and the steal
+    limit come from the sign-ups and the event (`gameFromRoster` in
+    `src/lib/event-game.ts`). Organizer only.
+  - `/party`: a quick game with no event. The host types in the players and
+    their gifts.
 
 ## Game rules (`src/lib/game.ts`)
 
@@ -38,8 +47,15 @@ says what the current player may do, and `applyMove` returns a new state or
 throws a `GameRuleError` whose message can be shown to players. Return those
 errors as 409.
 
-Gifts can carry a `name`. Always send a game to players through
-`toPlayerView`, which hides the names of gifts that are still wrapped.
+Gifts can carry a `name`. Always show a game through `toPlayerView`, which
+hides the names of gifts that are still wrapped.
+
+**Gifts are anonymous.** A participant's `gift` is what they're bringing. It's
+required on sign-up, and the person can see and edit their own. No other page
+shows it: the organizer dashboard and CSV only say whether a gift was added,
+and the poll never includes it. The roster route sends gifts to the
+organizer's browser because the game needs them, and the game only reveals
+each one when it's unwrapped. A sign-up with no gift plays as "A mystery gift".
 
 To watch a random game play out in the terminal: `npx tsx scripts/try-game.ts`.
 
@@ -57,7 +73,7 @@ npm install
 npm run dev      # http://localhost:3000
 npm run build
 npm run lint
-npm test         # game rule tests
+npm test         # game rule and event game tests
 npm run seed     # adds a demo event with a few participants (run again = another demo event)
 ```
 
@@ -74,6 +90,9 @@ npm run seed     # adds a demo event with a few participants (run again = anothe
 | `src/lib/types.ts` | Shared data types |
 | `src/lib/game.ts` | Game rules: turn order, open, steal, freeze, final steal |
 | `src/lib/game.test.ts` | Tests for the game rules (`npm test`) |
+| `src/lib/event-game.ts` | `gameFromRoster`: turns an event's sign-ups into a game |
+| `src/app/events/[eventId]/game` | The event's game page (client, organizer only) |
+| `src/components/party/` | Game board (`party-board.tsx`, also the `/party` page) and the event game (`event-game.tsx`) |
 | `src/lib/validation.ts` | zod schemas for every request body |
 | `src/lib/identity-match.ts` | Name + email matching and normalization |
 | `src/lib/use-identity.ts` | Client hook that remembers name + email in `localStorage` |
@@ -141,5 +160,6 @@ changing routing, caching, or data fetching, read the matching guide in
 - `npm run lint`, `npm test`, and `npm run build` all pass.
 - Walk through the flow in a browser: create an event, join it from the link
   (in a second browser profile or private window), edit your entry, then
-  check the organizer's dashboard and the closed-sign-ups state.
+  check the organizer's dashboard and the closed-sign-ups state. With 3 or
+  more sign-ups, click Start game and play a round to the end.
 - Do not commit `data/`, `.env*`, or `node_modules/`.

@@ -20,7 +20,7 @@ const steps = [
   },
   {
     title: "Everyone signs up",
-    body: "People join with the link, then add their name, email or phone, interests, and gift hint. They can update their entry later.",
+    body: "People join with the link, then add their name, email or phone, interests, and the gift they're bringing. They can update their entry later.",
   },
 ];
 

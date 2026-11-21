@@ -197,7 +197,7 @@ function JoinedCard({
           changes: {
             department: String(form.get("department") ?? ""),
             attendance: String(form.get("attendance") ?? "in_person"),
-            giftTeaser: String(form.get("giftTeaser") ?? ""),
+            gift: String(form.get("gift") ?? ""),
             interests,
           },
         },
@@ -245,9 +245,9 @@ function JoinedCard({
         You&apos;re signed up · {attendanceLabel(participant.attendance)}
         {participant.department ? ` · ${participant.department}` : ""}
       </p>
-      {participant.giftTeaser ? (
-        <p className="mt-1 text-sm text-stone-600">Gift hint: {participant.giftTeaser}</p>
-      ) : null}
+      <p className="mt-1 text-sm text-stone-600">
+        Your gift: {participant.gift ?? "not added yet"}
+      </p>
       {participant.interests.length > 0 ? (
         <p className="mt-1 text-sm text-stone-600">
           Interests: {participant.interests.join(", ")}
@@ -293,11 +293,15 @@ function JoinedCard({
               ))}
             </div>
           </fieldset>
-          <Field label="Gift hint (optional)">
+          <Field
+            label="What gift are you bringing?"
+            hint="Kept secret. It's revealed only when someone unwraps it."
+          >
             <input
-              name="giftTeaser"
-              defaultValue={participant.giftTeaser}
-              maxLength={200}
+              name="gift"
+              required
+              defaultValue={participant.gift}
+              maxLength={120}
               className={inputClass}
             />
           </Field>

@@ -55,7 +55,8 @@ export type Participant = {
   phone?: string;
   department?: string;
   attendance: Attendance;
-  giftTeaser?: string;
+  /** The gift this person is bringing. Never shown to other players. */
+  gift?: string;
   /** Normalized interests and hobbies. Empty when none were given. */
   interests: string[];
   joinedAt: string;
